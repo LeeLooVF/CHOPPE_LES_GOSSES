@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="fr" data-lt-installed="true">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport">
+  <title>CHOPPE LES GOSSES !</title>
+  <meta content="CHOPPE LES GOSSES ! Un jeu d'arcade 2D en pixel art : conduis la camionnette, capture les enfants, évite les adultes et échappe à la police." name="description">
+  <meta content="yes" name="mobile-web-app-capable">
+  <meta content="black" name="apple-mobile-web-app-status-bar-style">
+  <meta content="CHOPPE LES GOSSES" name="apple-mobile-web-app-title">
+  <link href="https://media.base44.com/images/public/6adf7ca68921328224a33146/4138cc298_logo.png/v1/fit/w_180,h_180/4138cc298_logo.png" rel="icon" type="image/svg+xml">
+
+  <script>
+  (function () {
+    /* =========================================================================
+       1. LECTURE FIABLE DES VRAIES DIMENSIONS & BYPASS DU VERROU PAYSAGE
+       ========================================================================= */
+    function getPhysicalSize() {
+      var vv = window.visualViewport;
+      var w = (vv && vv.width) || document.documentElement.clientWidth || 390;
+      var h = (vv && vv.height) || document.documentElement.clientHeight || 844;
+      return { w: Math.max(w, 320), h: Math.max(h, 320) };
+    }
+
+    // Fait toujours croire au moteur JS que la largeur est supérieure à la hauteur (mode paysage)
+    try {
+      Object.defineProperty(window, 'innerWidth', {
+        configurable: true,
+        get: function () {
+          var s = getPhysicalSize();
+          return Math.max(s.w, s.h);
+        }
+      });
+      Object.defineProperty(window, 'innerHeight', {
+        configurable: true,
+        get: function () {
+          var s = getPhysicalSize();
+          return Math.min(s.w, s.h);
+        }
+      });
+      Object.defineProperty(window, 'orientation', {
+        configurable: true,
+        get: function () { return 90; }
+      });
+      if (window.screen && window.screen.orientation) {
+        Object.defineProperty(window.screen.orientation, 'type', {
+          configurable: true,
+          get: function () { return 'landscape-primary'; }
+        });
+        Object.defineProperty(window.screen.orientation, 'angle', {
+          configurable: true,
+          get: function () { return 90; }
+        });
+      }
+    } catch (e) {}
+
+    // Force l'activation des contrôles tactiles à l'écran
+    try {
+      if (!('ontouchstart' in window)) window.ontouchstart = null;
+      if (!navigator.maxTouchPoints || navigator.maxTouchPoints < 1) {
+        Object.defineProperty(navigator, 'maxTouchPoints', { configurable: true, get: function () { return 5; } });
+      }
+    } catch (e) {}
+
+    // Intercepte matchMedia pour bloquer la détection portrait et activer le mode tactile
+    var origMatchMedia = window.matchMedia ? window.matchMedia.bind(window) : null;
+    if (origMatchMedia) {
+      window.matchMedia = function (query) {
+        var q = String(query || '').toLowerCase();
+        var mql = origMatchMedia(query);
+        if (q.indexOf('orientation: portrait') !== -1 || q.indexOf('orientation:portrait') !== -1 || q.indexOf('max-aspect-ratio') !== -1) {
+          return {
+            matches: false,
+            media: query,
+            onchange: null,
+            addListener: function () {},
+            removeListener: function () {},
+            addEventListener: function () {},
+            removeEventListener: function () {},
+            dispatchEvent: function () { return false; }
+          };
+        }
+        if (
+          q.indexOf('orientation: landscape') !== -1 ||
+          q.indexOf('orientation:landscape') !== -1 ||
+          q.indexOf('min-aspect-ratio') !== -1 ||
+          q.indexOf('pointer: coarse') !== -1 ||
+          q.indexOf('pointer:coarse') !== -1 ||
+          q.indexOf('hover: none') !== -1
+        ) {
+          return {
+            matches: true,
+            media: query,
+            onchange: null,
+            addListener: function () {},
+            removeListener: function () {},
+            addEventListener: function () {},
+            removeEventListener: function () {},
+            dispatchEvent: function () { return false; }
+          };
+        }
+        return mql;
+      };
+    }
+
+    /* =========================================================================
+       2. FIX REACT ROUTER (ÉVITE LA PAGE 404 BLANCHE SUR UN FICHIER .HTML)
+       ========================================================================= */
+    var maskedRootState = { idx: 0, key: 'default', usr: null, masked: { pathname: '/', search: '', hash: '' } };
+    try {
+      window.history.replaceState(maskedRootState, '');
+    } catch (e) {}
+    try {
+      var origStateDesc = Object.getOwnPropertyDescriptor(History.prototype, 'state');
+      Object.defineProperty(History.prototype, 'state', {
+        configurable: true,
+        get: function () {
+          var st = origStateDesc && origStateDesc.get ? origStateDesc.get.call(this) : null;
+          if (st && st.masked) return st;
+          return Object.assign({}, st || {}, maskedRootState);
+        }
+      });
+    } catch (e) {}
+
+    /* =========================================================================
+       3. MOCK LOCAL DES REQUÊTES API BASE44 (ÉVITE LE BLOCAGE AU DÉMARRAGE)
+       ========================================================================= */
+    function getMockApiResponse(url) {
+      var u = String(url || '');
+      if (u.indexOf('public-settings') !== -1) {
+        return {
+          id: '6adf7ca68921328224a33146',
+          app_id: '6adf7ca68921328224a33146',
+          public_settings: { auth_required: false, is_public: true }
+        };
+      }
+      if (u.indexOf('/entities/User/me') !== -1) {
+        return { id: 'local-user', email: 'player@local', full_name: 'Joueur', role: 'user' };
+      }
+      if (u.indexOf('/app-logs/') !== -1 || u.indexOf('/analytics/') !== -1) {
+        return { ok: true };
+      }
+      if (u.indexOf('/api/apps/') !== -1) {
+        return [];
+      }
+      return null;
+    }
+
+    // Interception de fetch pour les appels API Base44
+    var origFetch = window.fetch ? window.fetch.bind(window) : null;
+    if (origFetch) {
+      window.fetch = function (input, init) {
+        var url = typeof input === 'string' ? input : (input && input.url ? input.url : '');
+        var mockData = getMockApiResponse(url);
+        if (mockData !== null) {
+          return Promise.resolve(new Response(JSON.stringify(mockData), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+          }));
+        }
+        return origFetch(input, init);
+      };
+    }
+
+    // Interception de XMLHttpRequest (utilisé par Axios dans le bundle Base44)
+    var proto = XMLHttpRequest.prototype;
+    var origOpen = proto.open;
+    var origSend = proto.send;
+
+    proto.open = function (method, url) {
+      this.__mockData = getMockApiResponse(url);
+      return origOpen.apply(this, arguments);
+    };
+
+    proto.send = function () {
+      if (this.__mockData !== null && this.__mockData !== undefined) {
+        var self = this;
+        var body = JSON.stringify(this.__mockData);
+        setTimeout(function () {
+          try {
+            Object.defineProperty(self, 'readyState', { configurable: true, value: 4 });
+            Object.defineProperty(self, 'status', { configurable: true, value: 200 });
+            Object.defineProperty(self, 'statusText', { configurable: true, value: 'OK' });
+            Object.defineProperty(self, 'responseText', { configurable: true, value: body });
+            Object.defineProperty(self, 'response', { configurable: true, value: body });
+          } catch (e) {}
+          if (typeof self.onreadystatechange === 'function') self.onreadystatechange();
+          if (typeof self.onload === 'function') self.onload();
+          if (typeof self.onloadend === 'function') self.onloadend();
+          try {
+            self.dispatchEvent(new Event('readystatechange'));
+            self.dispatchEvent(new Event('load'));
+            self.dispatchEvent(new Event('loadend'));
+          } catch (e) {}
+        }, 0);
+        return;
+      }
+      return origSend.apply(this, arguments);
+    };
+  })();
+  </script>
+
+  <!-- Polices et feuilles de style (sans crossorigin="" pour fonctionner aussi en local) -->
+  <link href="https://fonts.googleapis.com/" rel="preconnect">
+  <link crossorigin="" href="https://fonts.gstatic.com/" rel="preconnect">
+  <link href="./CHOPPE LES GOSSES !_files/css2" rel="stylesheet">
+  <link href="./CHOPPE LES GOSSES !_files/index-BYDJH_uF.css" rel="stylesheet" onerror="this.onerror=null;this.href='https://choppelesgosses.ne-fais-pas-le-geste.com/assets/index-BYDJH_uF.css';">
+
+  <style>
+    /* =========================================================================
+       4. ADAPTATION VISUELLE & ERGONOMIQUE EN MODE PORTRAIT
+       ========================================================================= */
+
+    /* Fond sombre forcé en permanence (évite tout écran blanc) */
+    html, body, #root {
+      background-color: #060911 !important;
+      color: #cfe3ff;
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Masque uniquement l'écran demandant de tourner le téléphone (sans toucher au parent !) */
+    .phone-tilt,
+    .gap-\[7vh\].px-\[8vw\] {
+      display: none !important;
+      pointer-events: none !important;
+    }
+
+    /* Bouton discret en haut à droite permettant de choisir le format de la vue en portrait */
+    #portrait-view-toggle {
+      display: none;
+      position: fixed;
+      top: calc(env(safe-area-inset-top, 0px) + 6px);
+      right: 8px;
+      z-index: 95;
+      font-family: var(--font-pixel), monospace;
+      font-size: 9px;
+      padding: 6px 8px;
+      background: rgba(27, 37, 64, 0.92);
+      color: #ffd93d;
+      border: 1.5px solid #2b3a55;
+      border-radius: 6px;
+      box-shadow: 0 2px 0 #0a0f1e;
+      text-transform: uppercase;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    @media (orientation: portrait) {
+      #portrait-view-toggle {
+        display: block;
+      }
+
+      html, body {
+        overflow: hidden !important;
+        height: 100dvh !important;
+        width: 100vw !important;
+        user-select: none !important;
+      }
+
+      /* Conteneur principal en plein écran vertical */
+      #root > div.flex.min-h-screen {
+        padding: 0 !important;
+        min-height: 100dvh !important;
+        height: 100dvh !important;
+        align-items: stretch !important;
+        justify-content: stretch !important;
+      }
+
+      #root > div.flex.min-h-screen > div.relative.w-full {
+        max-width: 100vw !important;
+        width: 100vw !important;
+        height: 100dvh !important;
+      }
+
+      /* Transformation de .game-stage en borne d'arcade verticale */
+      .game-stage {
+        aspect-ratio: auto !important;
+        width: 100vw !important;
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+        border-radius: 0 !important;
+        border-width: 0 !important;
+        background: linear-gradient(180deg, #070b16 0%, #0b1020 12%, #0b1020 62%, #080d1a 62%, #050811 100%) !important;
+      }
+
+      /* Zone de jeu (Canvas) placée au niveau des yeux, entre le HUD (haut) et les pouces (bas) */
+      .game-stage > canvas,
+      .game-stage > .crt-overlay {
+        inset: auto !important;
+        top: calc(env(safe-area-inset-top, 0px) + 12dvh) !important;
+        left: 0 !important;
+        right: 0 !important;
+        width: 100vw !important;
+        height: 48dvh !important;
+        border-top: 2px solid #2b3a55 !important;
+        border-bottom: 2px solid #2b3a55 !important;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.85) !important;
+      }
+
+      /* Option Vue 2 : Format 16:9 strict */
+      html[data-portrait-view="ratio169"] .game-stage > canvas,
+      html[data-portrait-view="ratio169"] .game-stage > .crt-overlay {
+        top: calc(env(safe-area-inset-top, 0px) + 18dvh) !important;
+        height: 56.25vw !important;
+      }
+
+      /* Option Vue 3 : Plein écran vertical */
+      html[data-portrait-view="full"] .game-stage > canvas,
+      html[data-portrait-view="full"] .game-stage > .crt-overlay {
+        top: 0 !important;
+        height: 100dvh !important;
+        border: none !important;
+      }
+
+      /* Recalibrage des tailles de police (cqw) pour la largeur d'un téléphone en portrait */
+      .game-stage .text-\[5\.4cqw\] { font-size: 7.4cqw !important; }
+      .game-stage .text-\[4\.7cqw\] { font-size: 6.8cqw !important; }
+      .game-stage .text-\[3cqw\]    { font-size: 5.2cqw !important; }
+      .game-stage .text-\[2\.3cqw\] { font-size: 4.4cqw !important; }
+      .game-stage .text-\[2\.1cqw\] { font-size: 4.1cqw !important; }
+      .game-stage .text-\[1\.9cqw\] { font-size: 3.8cqw !important; }
+      .game-stage .text-\[1\.7cqw\] { font-size: 3.6cqw !important; }
+      .game-stage .text-\[1\.6cqw\] { font-size: 3.4cqw !important; }
+      .game-stage .text-\[1\.5cqw\] { font-size: 3.3cqw !important; }
+      .game-stage .text-\[1\.4cqw\] { font-size: 3.1cqw !important; }
+      .game-stage .text-\[1\.35cqw\]{ font-size: 3.0cqw !important; }
+      .game-stage .text-\[1\.3cqw\] { font-size: 3.0cqw !important; }
+      .game-stage .text-\[1\.25cqw\]{ font-size: 2.9cqw !important; }
+      .game-stage .text-\[1\.15cqw\]{ font-size: 3.1cqw !important; }
+      .game-stage .text-\[1\.1cqw\] { font-size: 2.8cqw !important; }
+      .game-stage .text-\[1\.05cqw\]{ font-size: 2.7cqw !important; }
+      .game-stage .text-\[1cqw\]    { font-size: 2.6cqw !important; }
+      .game-stage .text-\[0\.95cqw\]{ font-size: 2.5cqw !important; }
+      .game-stage .text-\[0\.85cqw\]{ font-size: 2.3cqw !important; }
+      .game-stage .text-\[0\.8cqw\] { font-size: 2.2cqw !important; }
+
+      /* Ajustement des largeurs de texte et boîtes de dialogue */
+      .game-stage .max-w-\[46cqw\],
+      .game-stage .max-w-\[64cqw\],
+      .game-stage .max-w-\[72cqw\],
+      .game-stage .max-w-\[76cqw\],
+      .game-stage .max-w-\[86cqw\],
+      .game-stage .max-w-\[88cqw\],
+      .game-stage .max-w-\[94cqw\] {
+        max-width: 92cqw !important;
+      }
+
+      /* Boutons de menu et espacements */
+      .game-stage .px-\[1\.7cqw\]  { padding-left: 4.2cqw !important; padding-right: 4.2cqw !important; }
+      .game-stage .py-\[1\.05cqw\] { padding-top: 2.8cqw !important; padding-bottom: 2.8cqw !important; }
+      .game-stage .px-\[1\.2cqw\]  { padding-left: 2.6cqw !important; padding-right: 2.6cqw !important; }
+      .game-stage .py-\[0\.7cqw\]  { padding-top: 1.6cqw !important; padding-bottom: 1.6cqw !important; }
+      .game-stage .gap-\[2\.2cqw\] { gap: 4.5cqw !important; }
+      .game-stage .gap-\[1\.4cqw\] { gap: 3.2cqw !important; }
+      .game-stage .gap-\[1\.1cqw\] { gap: 2.5cqw !important; }
+
+      /* Icônes du HUD (Pause / Son) */
+      .game-stage .h-\[2\.8cqw\] { height: 7.8cqw !important; }
+      .game-stage .w-\[2\.8cqw\] { width: 7.8cqw !important; }
+
+      /* Agrandissement des contrôles tactiles (flèches & bouton Capturer) dans la zone basse */
+      .game-stage .h-\[11cqw\]    { height: 17.5cqw !important; }
+      .game-stage .w-\[11cqw\]    { width: 17.5cqw !important; }
+      .game-stage .h-\[11\.5cqw\] { height: 18cqw !important; }
+      .game-stage .w-\[11\.5cqw\] { width: 18cqw !important; }
+      .game-stage .h-\[13cqw\]    { height: 21cqw !important; }
+      .game-stage .w-\[13cqw\]    { width: 21cqw !important; }
+      .game-stage .w-\[16cqw\]    { width: 32cqw !important; }
+      .game-stage .w-\[17cqw\]    { width: 34cqw !important; }
+
+      /* Marges pour le HUD en haut et la manette en bas */
+      .game-stage > .z-20 {
+        padding-top: calc(env(safe-area-inset-top, 0px) + 6px) !important;
+        padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 18px) !important;
+        padding-left: 3.5cqw !important;
+        padding-right: 3.5cqw !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="root">
+    <div class="flex min-h-screen w-full items-center justify-center bg-[#060911] p-3 sm:p-5">
+      <div class="pointer-events-none absolute inset-0 opacity-40" style="background-image: radial-gradient(circle at 50% 0%, rgba(255, 92, 138, 0.18), transparent 55%), radial-gradient(circle at 50% 100%, rgba(107, 227, 255, 0.14), transparent 55%);"></div>
+      <div class="relative w-full max-w-[1280px]">
+        <div class="game-stage relative aspect-[16/9] w-full overflow-hidden rounded-lg border-2 border-[#1d2740] bg-[#0b1020] shadow-[0_0_50px_rgba(0,0,0,0.85)]">
+          <canvas width="1280" height="720" class="pixelated absolute inset-0 h-full w-full"></canvas>
+          <div class="crt-overlay pointer-events-none absolute inset-0 z-10 opacity-60"></div>
+          <div class="absolute inset-0 z-30 flex flex-col items-center justify-center bg-gradient-to-b from-[#070b16]/90 via-[#070b16]/70 to-[#070b16]/92 px-[4cqw] text-center gap-[2.2cqw]">
+            <div class="flex flex-col items-center gap-[1.1cqw]">
+              <h1 class="arcade-title font-pixel leading-[1.14] text-[4.7cqw]">CHOPPE<br>LES GOSSES !</h1>
+              <p class="font-ui leading-[1.6] text-[#c2d0ea] max-w-[46cqw] text-[1.15cqw]">Remplis la camionnette sans embarquer d'adultes et sans te faire repérer par la police.</p>
+            </div>
+            <div class="flex items-center gap-[1.4cqw]">
+              <button type="button" class="font-pixel cursor-pointer touch-none select-none border-[0.25cqw] border-black/40 px-[1.7cqw] py-[1.05cqw] text-[1.3cqw] uppercase tracking-[0.06em] transition-all duration-150 active:translate-y-[0.45cqw] active:shadow-none bg-[#ffd93d] text-[#2a1c00] shadow-[0_0.55cqw_0_#8a6a00] hover:bg-[#ffe680]">Jouer</button>
+              <button type="button" class="font-pixel cursor-pointer touch-none select-none border-[0.25cqw] border-black/40 px-[1.7cqw] py-[1.05cqw] text-[1.3cqw] uppercase tracking-[0.06em] transition-all duration-150 active:translate-y-[0.45cqw] active:shadow-none bg-[#1b2540] text-[#cfe3ff] shadow-[0_0.55cqw_0_#0a0f1e] hover:bg-[#26365c]">Comment jouer</button>
+            </div>
+            <div class="flex flex-col items-center gap-[0.6cqw]">
+              <span class="font-ui uppercase tracking-[0.3em] text-[#8fa2c8] text-[1cqw]">Record personnel</span>
+              <span class="font-pixel text-[#ffd93d] text-[1.7cqw]">0</span>
+            </div>
+            <p class="font-ui tracking-[0.08em] text-[#7f90b3] text-[0.95cqw]">← → ou A / D pour conduire · ↑ ↓ pour changer de ligne · ESPACE à maintenir pour capturer</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  /* =========================================================================
+     5. CHARGEUR INTELLIGENT DU BUNDLE JS (CONTOURNE L'EXTENSION .téléchargement)
+     ========================================================================= */
+  (function () {
+    // Bouton de changement de vue en mode portrait
+    var modes = ['arcade', 'ratio169', 'full'];
+    var labels = { arcade: 'Vue: Arcade', ratio169: 'Vue: 16:9', full: 'Vue: Plein' };
+    var idx = 0;
+    document.documentElement.setAttribute('data-portrait-view', modes[0]);
+
+    var btn = document.createElement('button');
+    btn.id = 'portrait-view-toggle';
+    btn.type = 'button';
+    btn.textContent = labels[modes[0]];
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      idx = (idx + 1) % modes.length;
+      var m = modes[idx];
+      document.documentElement.setAttribute('data-portrait-view', m);
+      btn.textContent = labels[m];
+    });
+    document.body.appendChild(btn);
+
+    // Liste des sources JS à essayer dans l'ordre (local .téléchargement -> local .js -> serveur distant)
+    var candidates = [
+      './CHOPPE LES GOSSES !_files/index-BkHqcgSe.js.téléchargement',
+      './CHOPPE LES GOSSES !_files/index-BkHqcgSe.js',
+      'https://choppelesgosses.ne-fais-pas-le-geste.com/assets/index-BkHqcgSe.js'
+    ];
+
+    function tryLoadScript(i) {
+      if (i >= candidates.length) {
+        // Ultime recours : balise script directe vers le CDN du jeu
+        var s = document.createElement('script');
+        s.type = 'module';
+        s.crossOrigin = '';
+        s.src = 'https://choppelesgosses.ne-fais-pas-le-geste.com/assets/index-BkHqcgSe.js';
+        document.body.appendChild(s);
+        return;
+      }
+
+      fetch(candidates[i])
+        .then(function (res) {
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          return res.text();
+        })
+        .then(function (code) {
+          // Vérifie qu'on a bien reçu le fichier JS et non une page HTML 404
+          if (code.trim().indexOf('<!DOCTYPE') === 0 || code.trim().indexOf('<html') === 0) {
+            throw new Error('Not JS');
+          }
+          // Remplace import.meta.url pour que le Blob URL fonctionne partout
+          var patchedCode = code.replace(/import\.meta\.url/g, JSON.stringify(window.location.href));
+          var blob = new Blob([patchedCode], { type: 'text/javascript' });
+          var blobUrl = URL.createObjectURL(blob);
+          var script = document.createElement('script');
+          script.type = 'module';
+          script.src = blobUrl;
+          document.body.appendChild(script);
+        })
+        .catch(function () {
+          tryLoadScript(i + 1);
+        });
+    }
+
+    tryLoadScript(0);
+  })();
+  </script>
+</body>
+</html>
