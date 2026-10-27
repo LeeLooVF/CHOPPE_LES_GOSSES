@@ -13,7 +13,7 @@
   <script>
   (function () {
     /* =========================================================================
-       1. LECTURE FIABLE DES VRAIES DIMENSIONS & BYPASS DU VERROU PAYSAGE
+       1. SUPPRESSION DE L'OBLIGATION DU MODE PAYSAGE
        ========================================================================= */
     function getPhysicalSize() {
       var vv = window.visualViewport;
@@ -22,7 +22,6 @@
       return { w: Math.max(w, 320), h: Math.max(h, 320) };
     }
 
-    // Fait toujours croire au moteur JS que la largeur est supérieure à la hauteur (mode paysage)
     try {
       Object.defineProperty(window, 'innerWidth', {
         configurable: true,
@@ -62,7 +61,6 @@
       }
     } catch (e) {}
 
-    // Intercepte matchMedia pour bloquer la détection portrait et activer le mode tactile
     var origMatchMedia = window.matchMedia ? window.matchMedia.bind(window) : null;
     if (origMatchMedia) {
       window.matchMedia = function (query) {
@@ -104,7 +102,7 @@
     }
 
     /* =========================================================================
-       2. FIX REACT ROUTER (ÉVITE LA PAGE 404 BLANCHE SUR UN FICHIER .HTML)
+       2. FIX REACT ROUTER & MOCK LOCAL API BASE44
        ========================================================================= */
     var maskedRootState = { idx: 0, key: 'default', usr: null, masked: { pathname: '/', search: '', hash: '' } };
     try {
@@ -122,9 +120,6 @@
       });
     } catch (e) {}
 
-    /* =========================================================================
-       3. MOCK LOCAL DES REQUÊTES API BASE44 (ÉVITE LE BLOCAGE AU DÉMARRAGE)
-       ========================================================================= */
     function getMockApiResponse(url) {
       var u = String(url || '');
       if (u.indexOf('public-settings') !== -1) {
@@ -146,7 +141,6 @@
       return null;
     }
 
-    // Interception de fetch pour les appels API Base44
     var origFetch = window.fetch ? window.fetch.bind(window) : null;
     if (origFetch) {
       window.fetch = function (input, init) {
@@ -162,7 +156,6 @@
       };
     }
 
-    // Interception de XMLHttpRequest (utilisé par Axios dans le bundle Base44)
     var proto = XMLHttpRequest.prototype;
     var origOpen = proto.open;
     var origSend = proto.send;
@@ -200,18 +193,18 @@
   })();
   </script>
 
-  <!-- Polices et feuilles de style (sans crossorigin="" pour fonctionner aussi en local) -->
+  <!-- Chargement direct des polices Google Fonts (Press Start 2P & Inter) + CSS -->
   <link href="https://fonts.googleapis.com/" rel="preconnect">
   <link crossorigin="" href="https://fonts.gstatic.com/" rel="preconnect">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
   <link href="./CHOPPE LES GOSSES !_files/css2" rel="stylesheet">
   <link href="./CHOPPE LES GOSSES !_files/index-BYDJH_uF.css" rel="stylesheet" onerror="this.onerror=null;this.href='https://choppelesgosses.ne-fais-pas-le-geste.com/assets/index-BYDJH_uF.css';">
 
   <style>
     /* =========================================================================
-       4. ADAPTATION VISUELLE & ERGONOMIQUE EN MODE PORTRAIT
+       3. ADAPTATION PORTRAIT : TEXTES CORRIGÉS, PLEIN ÉCRAN & BOUTONS EN BAS
        ========================================================================= */
 
-    /* Fond sombre forcé en permanence (évite tout écran blanc) */
     html, body, #root {
       background-color: #060911 !important;
       color: #cfe3ff;
@@ -221,38 +214,14 @@
       height: 100%;
     }
 
-    /* Masque uniquement l'écran demandant de tourner le téléphone (sans toucher au parent !) */
+    /* Masque l'overlay de rotation téléphone */
     .phone-tilt,
     .gap-\[7vh\].px-\[8vw\] {
       display: none !important;
       pointer-events: none !important;
     }
 
-    /* Bouton discret en haut à droite permettant de choisir le format de la vue en portrait */
-    #portrait-view-toggle {
-      display: none;
-      position: fixed;
-      top: calc(env(safe-area-inset-top, 0px) + 6px);
-      right: 8px;
-      z-index: 95;
-      font-family: var(--font-pixel), monospace;
-      font-size: 9px;
-      padding: 6px 8px;
-      background: rgba(27, 37, 64, 0.92);
-      color: #ffd93d;
-      border: 1.5px solid #2b3a55;
-      border-radius: 6px;
-      box-shadow: 0 2px 0 #0a0f1e;
-      text-transform: uppercase;
-      cursor: pointer;
-      touch-action: manipulation;
-    }
-
     @media (orientation: portrait) {
-      #portrait-view-toggle {
-        display: block;
-      }
-
       html, body {
         overflow: hidden !important;
         height: 100dvh !important;
@@ -260,7 +229,7 @@
         user-select: none !important;
       }
 
-      /* Conteneur principal en plein écran vertical */
+      /* Conteneur racine sur toute la hauteur et largeur */
       #root > div.flex.min-h-screen {
         padding: 0 !important;
         min-height: 100dvh !important;
@@ -275,7 +244,7 @@
         height: 100dvh !important;
       }
 
-      /* Transformation de .game-stage en borne d'arcade verticale */
+      /* Scène de jeu étendue jusqu'en bas de l'écran */
       .game-stage {
         aspect-ratio: auto !important;
         width: 100vw !important;
@@ -283,61 +252,56 @@
         max-height: 100dvh !important;
         border-radius: 0 !important;
         border-width: 0 !important;
-        background: linear-gradient(180deg, #070b16 0%, #0b1020 12%, #0b1020 62%, #080d1a 62%, #050811 100%) !important;
+        background-color: #0b1020 !important;
       }
 
-      /* Zone de jeu (Canvas) placée au niveau des yeux, entre le HUD (haut) et les pouces (bas) */
+      /* Zone de jeu (Canvas + CRT) étendue sur 100% de l'écran jusqu'en bas */
       .game-stage > canvas,
       .game-stage > .crt-overlay {
-        inset: auto !important;
-        top: calc(env(safe-area-inset-top, 0px) + 12dvh) !important;
+        inset: 0 !important;
+        top: 0 !important;
         left: 0 !important;
         right: 0 !important;
+        bottom: 0 !important;
         width: 100vw !important;
-        height: 48dvh !important;
-        border-top: 2px solid #2b3a55 !important;
-        border-bottom: 2px solid #2b3a55 !important;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.85) !important;
-      }
-
-      /* Option Vue 2 : Format 16:9 strict */
-      html[data-portrait-view="ratio169"] .game-stage > canvas,
-      html[data-portrait-view="ratio169"] .game-stage > .crt-overlay {
-        top: calc(env(safe-area-inset-top, 0px) + 18dvh) !important;
-        height: 56.25vw !important;
-      }
-
-      /* Option Vue 3 : Plein écran vertical */
-      html[data-portrait-view="full"] .game-stage > canvas,
-      html[data-portrait-view="full"] .game-stage > .crt-overlay {
-        top: 0 !important;
         height: 100dvh !important;
         border: none !important;
+        box-shadow: none !important;
       }
 
-      /* Recalibrage des tailles de police (cqw) pour la largeur d'un téléphone en portrait */
-      .game-stage .text-\[5\.4cqw\] { font-size: 7.4cqw !important; }
-      .game-stage .text-\[4\.7cqw\] { font-size: 6.8cqw !important; }
-      .game-stage .text-\[3cqw\]    { font-size: 5.2cqw !important; }
-      .game-stage .text-\[2\.3cqw\] { font-size: 4.4cqw !important; }
-      .game-stage .text-\[2\.1cqw\] { font-size: 4.1cqw !important; }
-      .game-stage .text-\[1\.9cqw\] { font-size: 3.8cqw !important; }
-      .game-stage .text-\[1\.7cqw\] { font-size: 3.6cqw !important; }
-      .game-stage .text-\[1\.6cqw\] { font-size: 3.4cqw !important; }
-      .game-stage .text-\[1\.5cqw\] { font-size: 3.3cqw !important; }
-      .game-stage .text-\[1\.4cqw\] { font-size: 3.1cqw !important; }
-      .game-stage .text-\[1\.35cqw\]{ font-size: 3.0cqw !important; }
-      .game-stage .text-\[1\.3cqw\] { font-size: 3.0cqw !important; }
-      .game-stage .text-\[1\.25cqw\]{ font-size: 2.9cqw !important; }
-      .game-stage .text-\[1\.15cqw\]{ font-size: 3.1cqw !important; }
-      .game-stage .text-\[1\.1cqw\] { font-size: 2.8cqw !important; }
-      .game-stage .text-\[1\.05cqw\]{ font-size: 2.7cqw !important; }
-      .game-stage .text-\[1cqw\]    { font-size: 2.6cqw !important; }
-      .game-stage .text-\[0\.95cqw\]{ font-size: 2.5cqw !important; }
-      .game-stage .text-\[0\.85cqw\]{ font-size: 2.3cqw !important; }
-      .game-stage .text-\[0\.8cqw\] { font-size: 2.2cqw !important; }
+      /* -----------------------------------------------------------------------
+         CORRECTION DES DIMENSIONS DES TEXTES & DU HUD (PAS DE DÉBORDEMENT)
+         ----------------------------------------------------------------------- */
+      .game-stage .text-\[5\.4cqw\] { font-size: 5.2cqw !important; }
+      .game-stage .text-\[4\.7cqw\] { font-size: 4.8cqw !important; }
+      .game-stage .text-\[3cqw\]    { font-size: 3.2cqw !important; }
+      .game-stage .text-\[2\.3cqw\] { font-size: 2.5cqw !important; }
+      .game-stage .text-\[2\.1cqw\] { font-size: 2.3cqw !important; }
+      .game-stage .text-\[1\.9cqw\] { font-size: 2.1cqw !important; }
+      .game-stage .text-\[1\.7cqw\] { font-size: 1.95cqw !important; }
+      .game-stage .text-\[1\.6cqw\] { font-size: 1.85cqw !important; }
+      .game-stage .text-\[1\.5cqw\] { font-size: 1.75cqw !important; }
+      .game-stage .text-\[1\.4cqw\] { font-size: 1.65cqw !important; }
+      .game-stage .text-\[1\.35cqw\]{ font-size: 1.6cqw !important; }
+      .game-stage .text-\[1\.3cqw\] { font-size: 1.55cqw !important; }
+      .game-stage .text-\[1\.25cqw\]{ font-size: 1.5cqw !important; }
+      .game-stage .text-\[1\.15cqw\]{ font-size: 1.45cqw !important; }
+      .game-stage .text-\[1\.1cqw\] { font-size: 1.4cqw !important; }
+      .game-stage .text-\[1\.05cqw\]{ font-size: 1.35cqw !important; }
+      .game-stage .text-\[1cqw\]    { font-size: 1.3cqw !important; }
+      .game-stage .text-\[0\.95cqw\]{ font-size: 1.25cqw !important; }
+      .game-stage .text-\[0\.85cqw\]{ font-size: 1.15cqw !important; }
+      .game-stage .text-\[0\.8cqw\] { font-size: 1.1cqw !important; }
 
-      /* Ajustement des largeurs de texte et boîtes de dialogue */
+      /* Ajustement du HUD supérieur pour que tout rentre dans la largeur */
+      .game-stage .h-\[11cqw\] { height: 11.5cqw !important; }
+      .game-stage .w-\[11cqw\] { width: 11.5cqw !important; }
+      .game-stage .w-\[16cqw\] { width: 18cqw !important; }
+      .game-stage .w-\[17cqw\] { width: 19cqw !important; }
+      .game-stage .h-\[2\.8cqw\] { height: 5.2cqw !important; }
+      .game-stage .w-\[2\.8cqw\] { width: 5.2cqw !important; }
+
+      /* Espacements modérés pour les menus et modales */
       .game-stage .max-w-\[46cqw\],
       .game-stage .max-w-\[64cqw\],
       .game-stage .max-w-\[72cqw\],
@@ -345,38 +309,43 @@
       .game-stage .max-w-\[86cqw\],
       .game-stage .max-w-\[88cqw\],
       .game-stage .max-w-\[94cqw\] {
-        max-width: 92cqw !important;
+        max-width: 90cqw !important;
       }
 
-      /* Boutons de menu et espacements */
-      .game-stage .px-\[1\.7cqw\]  { padding-left: 4.2cqw !important; padding-right: 4.2cqw !important; }
-      .game-stage .py-\[1\.05cqw\] { padding-top: 2.8cqw !important; padding-bottom: 2.8cqw !important; }
-      .game-stage .px-\[1\.2cqw\]  { padding-left: 2.6cqw !important; padding-right: 2.6cqw !important; }
-      .game-stage .py-\[0\.7cqw\]  { padding-top: 1.6cqw !important; padding-bottom: 1.6cqw !important; }
-      .game-stage .gap-\[2\.2cqw\] { gap: 4.5cqw !important; }
-      .game-stage .gap-\[1\.4cqw\] { gap: 3.2cqw !important; }
-      .game-stage .gap-\[1\.1cqw\] { gap: 2.5cqw !important; }
+      .game-stage .px-\[1\.7cqw\]  { padding-left: 3.2cqw !important; padding-right: 3.2cqw !important; }
+      .game-stage .py-\[1\.05cqw\] { padding-top: 2.0cqw !important; padding-bottom: 2.0cqw !important; }
 
-      /* Icônes du HUD (Pause / Son) */
-      .game-stage .h-\[2\.8cqw\] { height: 7.8cqw !important; }
-      .game-stage .w-\[2\.8cqw\] { width: 7.8cqw !important; }
+      /* -----------------------------------------------------------------------
+         POSITIONNEMENT DES DEUX BOUTONS TACTILES EN BAS DE L'ÉCRAN
+         ----------------------------------------------------------------------- */
+      /* Descend tout élément positionné à top-[60%] tout en bas de l'écran */
+      .game-stage .top-\[60\%\] {
+        top: auto !important;
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 3.5dvh) !important;
+        --tw-translate-y: 0px !important;
+        transform: translate(var(--tw-translate-x, 0px), 0px) !important;
+      }
 
-      /* Agrandissement des contrôles tactiles (flèches & bouton Capturer) dans la zone basse */
-      .game-stage .h-\[11cqw\]    { height: 17.5cqw !important; }
-      .game-stage .w-\[11cqw\]    { width: 17.5cqw !important; }
-      .game-stage .h-\[11\.5cqw\] { height: 18cqw !important; }
-      .game-stage .w-\[11\.5cqw\] { width: 18cqw !important; }
-      .game-stage .h-\[13cqw\]    { height: 21cqw !important; }
-      .game-stage .w-\[13cqw\]    { width: 21cqw !important; }
-      .game-stage .w-\[16cqw\]    { width: 32cqw !important; }
-      .game-stage .w-\[17cqw\]    { width: 34cqw !important; }
+      /* Joystick à gauche (h-[13cqw] w-[13cqw]) en bas à gauche */
+      .game-stage .h-\[13cqw\].w-\[13cqw\] {
+        height: 23cqw !important;
+        width: 23cqw !important;
+        top: auto !important;
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 3.5dvh) !important;
+        left: 5cqw !important;
+        --tw-translate-y: 0px !important;
+        transform: none !important;
+      }
 
-      /* Marges pour le HUD en haut et la manette en bas */
-      .game-stage > .z-20 {
-        padding-top: calc(env(safe-area-inset-top, 0px) + 6px) !important;
-        padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 18px) !important;
-        padding-left: 3.5cqw !important;
-        padding-right: 3.5cqw !important;
+      /* Bouton CHOPPER à droite (h-[11.5cqw] w-[11.5cqw]) en bas à droite */
+      .game-stage .h-\[11\.5cqw\].w-\[11\.5cqw\] {
+        height: 21cqw !important;
+        width: 21cqw !important;
+        top: auto !important;
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 4dvh) !important;
+        right: 5cqw !important;
+        --tw-translate-y: 0px !important;
+        transform: none !important;
       }
     }
   </style>
@@ -411,29 +380,9 @@
 
   <script>
   /* =========================================================================
-     5. CHARGEUR INTELLIGENT DU BUNDLE JS (CONTOURNE L'EXTENSION .téléchargement)
+     4. CHARGEUR DU BUNDLE JS
      ========================================================================= */
   (function () {
-    // Bouton de changement de vue en mode portrait
-    var modes = ['arcade', 'ratio169', 'full'];
-    var labels = { arcade: 'Vue: Arcade', ratio169: 'Vue: 16:9', full: 'Vue: Plein' };
-    var idx = 0;
-    document.documentElement.setAttribute('data-portrait-view', modes[0]);
-
-    var btn = document.createElement('button');
-    btn.id = 'portrait-view-toggle';
-    btn.type = 'button';
-    btn.textContent = labels[modes[0]];
-    btn.addEventListener('click', function (e) {
-      e.stopPropagation();
-      idx = (idx + 1) % modes.length;
-      var m = modes[idx];
-      document.documentElement.setAttribute('data-portrait-view', m);
-      btn.textContent = labels[m];
-    });
-    document.body.appendChild(btn);
-
-    // Liste des sources JS à essayer dans l'ordre (local .téléchargement -> local .js -> serveur distant)
     var candidates = [
       './CHOPPE LES GOSSES !_files/index-BkHqcgSe.js.téléchargement',
       './CHOPPE LES GOSSES !_files/index-BkHqcgSe.js',
@@ -442,7 +391,6 @@
 
     function tryLoadScript(i) {
       if (i >= candidates.length) {
-        // Ultime recours : balise script directe vers le CDN du jeu
         var s = document.createElement('script');
         s.type = 'module';
         s.crossOrigin = '';
@@ -457,11 +405,9 @@
           return res.text();
         })
         .then(function (code) {
-          // Vérifie qu'on a bien reçu le fichier JS et non une page HTML 404
           if (code.trim().indexOf('<!DOCTYPE') === 0 || code.trim().indexOf('<html') === 0) {
             throw new Error('Not JS');
           }
-          // Remplace import.meta.url pour que le Blob URL fonctionne partout
           var patchedCode = code.replace(/import\.meta\.url/g, JSON.stringify(window.location.href));
           var blob = new Blob([patchedCode], { type: 'text/javascript' });
           var blobUrl = URL.createObjectURL(blob);
