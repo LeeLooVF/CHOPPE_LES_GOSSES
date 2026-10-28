@@ -370,7 +370,7 @@
     }
 
     /* =========================================================================
-       BOUTON INJECTÉ SUR L'ÉCRAN DE GAME OVER
+       BOUTON INJECTÉ SUR L'ÉCRAN DE GAME OVER (UNIQUE)
        ========================================================================= */
     .btn-gameover-record {
       display: inline-flex;
@@ -379,13 +379,13 @@
       background: #fbbf24;
       color: #0f172a;
       font-family: 'Press Start 2P', monospace;
-      font-size: min(3cqw, 12px);
-      padding: 10px 14px;
+      font-size: min(2.8cqw, 11px);
+      padding: 12px 16px;
       border: 2px solid #ffffff;
       border-radius: 4px;
       box-shadow: 0 4px 0 #b45309;
       cursor: pointer;
-      margin-top: 8px;
+      margin-top: 10px;
       text-transform: uppercase;
       letter-spacing: 0.05em;
       transition: transform 0.08s ease;
@@ -510,10 +510,11 @@
 
   <script>
   /* =========================================================================
-     5. GESTION API CLOUDFLARE & DÉTECTION DU BOUTON GAME OVER
+     5. GESTION API CLOUDFLARE & INJECTION UNIQUE DU BOUTON GAME OVER
      ========================================================================= */
   const API_URL = "https://api-choppe-les-gosses.kjh27r4i-70a.workers.dev";
   let lastCapturedScore = 0;
+  let scoreAlreadySavedThisRound = false;
 
   const pseudoInput = document.getElementById("retro-pseudo-input");
   const charCountEl = document.getElementById("pseudo-char-count");
@@ -584,6 +585,9 @@
       body: JSON.stringify({ name: pseudo, score: lastCapturedScore })
     })
       .then(() => {
+        scoreAlreadySavedThisRound = true;
+        var existingBtn = document.getElementById("btn-gameover-record-unique");
+        if (existingBtn) existingBtn.remove();
         closeSaveScoreModal();
         openTop10Modal();
       })
@@ -600,16 +604,15 @@
     return String(str || "").replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[m]);
   }
 
-  // Hook global déclenché par le moteur de jeu lors d'une défaite
   window.onGameFinished = function(score) {
     lastCapturedScore = score || 0;
+    scoreAlreadySavedThisRound = false;
   };
 
   /* =========================================================================
-     OBSERVATEUR DOM : INJECTE LE BOUTON SUR L'ÉCRAN DE GAME OVER
+     OBSERVATEUR DOM SANS DUPLICATION (1 SEUL BOUTON PAR GAME OVER)
      ========================================================================= */
   setInterval(function () {
-    // Vérifie si l'écran de fin de partie est affiché
     var buttons = document.querySelectorAll("button");
     var rejouerBtn = null;
     buttons.forEach(function (btn) {
@@ -618,33 +621,40 @@
       }
     });
 
-    if (rejouerBtn && rejouerBtn.parentElement) {
-      var container = rejouerBtn.parentElement;
-      if (!container.querySelector(".btn-gameover-record")) {
-        // Extraction du score visible à l'écran si disponible
-        var scoreCard = document.body.innerText.match(/SCORE FINAL[\s\n\r]*([0-9]+)/i);
-        if (scoreCard && scoreCard[1]) {
-          lastCapturedScore = parseInt(scoreCard[1], 10);
-        }
+    var existingRecordBtn = document.getElementById("btn-gameover-record-unique");
 
-        var saveBtn = document.createElement("button");
-        saveBtn.className = "btn-gameover-record";
-        saveBtn.innerHTML = "💾 ENREGISTRER LE SCORE";
-        saveBtn.onclick = function (e) {
-          e.preventDefault();
-          e.stopPropagation();
-          // Met à jour la valeur du score au moment du clic
-          var currentMatch = document.body.innerText.match(/SCORE FINAL[\s\n\r]*([0-9]+)/i);
-          var finalScore = currentMatch ? parseInt(currentMatch[1], 10) : lastCapturedScore;
-          promptSaveScore(finalScore);
-        };
+    // Si on n'est PAS sur l'écran de fin de partie, on nettoie l'état
+    if (!rejouerBtn) {
+      scoreAlreadySavedThisRound = false;
+      if (existingRecordBtn) {
+        existingRecordBtn.remove();
+      }
+      return;
+    }
 
-        // Ajoute le bouton juste sous les boutons REJOUER et MENU
-        if (container.nextSibling) {
-          container.parentNode.insertBefore(saveBtn, container.nextSibling);
-        } else {
-          container.parentNode.appendChild(saveBtn);
-        }
+    // Si le bouton existe déjà ou si le score a déjà été enregistré, on ne fait rien
+    if (existingRecordBtn || scoreAlreadySavedThisRound) {
+      return;
+    }
+
+    var container = rejouerBtn.parentElement;
+    if (container && container.parentNode) {
+      var saveBtn = document.createElement("button");
+      saveBtn.id = "btn-gameover-record-unique";
+      saveBtn.className = "btn-gameover-record";
+      saveBtn.innerHTML = "💾 ENREGISTRER LE SCORE";
+      saveBtn.onclick = function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var currentMatch = document.body.innerText.match(/SCORE FINAL[\s\n\r]*([0-9]+)/i);
+        var finalScore = currentMatch ? parseInt(currentMatch[1], 10) : lastCapturedScore;
+        promptSaveScore(finalScore);
+      };
+
+      if (container.nextSibling) {
+        container.parentNode.insertBefore(saveBtn, container.nextSibling);
+      } else {
+        container.parentNode.appendChild(saveBtn);
       }
     }
   }, 300);
