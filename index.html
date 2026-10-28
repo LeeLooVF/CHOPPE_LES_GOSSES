@@ -198,7 +198,6 @@
         overflow: hidden !important;
       }
 
-      /* ZONE 1 : BANDEAU HUD EN HAUT */
       .game-stage > .z-20 {
         position: absolute !important;
         top: 0 !important;
@@ -262,7 +261,6 @@
         line-height: 1.15 !important;
       }
 
-      /* ZONE 2 : ZONE DE JEU (14.5dvh à 83.5dvh) */
       .game-stage > canvas,
       .game-stage > .crt-overlay {
         position: absolute !important;
@@ -275,7 +273,6 @@
         object-fit: fill !important;
       }
 
-      /* ZONE 3 : BANDEAU INFÉRIEUR (83.5dvh à 100dvh) */
       .game-stage::after {
         content: "" !important;
         position: absolute !important;
@@ -345,7 +342,7 @@
     }
 
     /* =========================================================================
-       BOUTON DU TOP 10 FLOTTANT & DÉCALÉ (PLUS BAS, SANS RECOUVREMENT)
+       BOUTON TOP 10 DÉCALÉ (SANS CHEVAUCHEMENT)
        ========================================================================= */
     #btn-open-top10 {
       position: fixed;
@@ -372,6 +369,37 @@
       transform: scale(0.95);
     }
 
+    /* =========================================================================
+       BOUTON INJECTÉ SUR L'ÉCRAN DE GAME OVER
+       ========================================================================= */
+    .btn-gameover-record {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: #fbbf24;
+      color: #0f172a;
+      font-family: 'Press Start 2P', monospace;
+      font-size: min(3cqw, 12px);
+      padding: 10px 14px;
+      border: 2px solid #ffffff;
+      border-radius: 4px;
+      box-shadow: 0 4px 0 #b45309;
+      cursor: pointer;
+      margin-top: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      transition: transform 0.08s ease;
+      z-index: 60;
+    }
+
+    .btn-gameover-record:active {
+      transform: translateY(2px);
+      box-shadow: 0 2px 0 #b45309;
+    }
+
+    /* =========================================================================
+       MODALES DU TOP 10 & FORMULAIRE DU SCORE
+       ========================================================================= */
     .retro-modal {
       display: none;
       position: fixed;
@@ -432,7 +460,7 @@
       background: #38bdf8;
       color: #030712;
       border: none;
-      padding: 11px 16px;
+      padding: 12px 16px;
       font-family: 'Press Start 2P', monospace;
       font-size: 10px;
       cursor: pointer;
@@ -445,25 +473,12 @@
       transform: translateY(2px);
       box-shadow: 0 2px 0 #0284c7;
     }
-
-    /* Boîte de sauvegarde du score */
-    #save-score-box {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.85);
-      z-index: 10001;
-      align-items: center;
-      justify-content: center;
-      padding: 16px;
-      font-family: 'Press Start 2P', monospace;
-    }
   </style>
 </head>
 <body>
   <div id="root"></div>
 
-  <!-- BOUTON D'ACCÈS AU TOP 10 DÉGAGÉ DE L'EN-TÊTE -->
+  <!-- BOUTON DU TOP 10 FLOTTANT -->
   <button id="btn-open-top10" onclick="openTop10Modal()">🏆 Top 10</button>
 
   <!-- MODALE DU TOP 10 CLOUDFLARE -->
@@ -477,25 +492,25 @@
     </div>
   </div>
 
-  <!-- POP-UP SAUVEGARDE DU SCORE AVEC PSEUDO JUSQU'À 20 CARACTÈRES -->
+  <!-- POP-UP SAUVEGARDE DU SCORE (PSEUDO JUSQU'À 20 CARACTÈRES) -->
   <div id="save-score-box" class="retro-modal">
     <div class="retro-modal-content" onclick="event.stopPropagation()">
-      <h3 id="save-score-title">FIN DE PARTIE !</h3>
-      <p id="save-score-subtitle" style="font-size: 9px; color: #94a3b8; margin-bottom: 14px;">Score : 0</p>
+      <h3>ENREGISTRER LE SCORE</h3>
+      <p id="save-score-subtitle" style="font-size: 10px; color: #38bdf8; margin-bottom: 14px;">SCORE : 0 PTS</p>
       
-      <div style="margin-bottom: 6px;">
+      <div style="margin-bottom: 4px;">
         <input type="text" id="retro-pseudo-input" maxlength="20" placeholder="TON PSEUDO" style="width: 100%; box-sizing: border-box; background: #111827; border: 2px solid #38bdf8; color: #fff; font-family: 'Press Start 2P', monospace; font-size: 10px; padding: 12px; text-align: center; border-radius: 6px; outline: none;">
       </div>
       <div id="pseudo-char-count" style="font-size: 8px; color: #64748b; margin-bottom: 14px; text-align: right;">0 / 20</div>
 
-      <button id="retro-btn-save" class="retro-btn" onclick="submitScore()" style="margin-bottom: 10px;">ENREGISTRER</button>
-      <button class="retro-btn" onclick="closeSaveScoreModal()" style="background: #374151; color: #9ca3af; box-shadow: 0 4px 0 #1f2937;">PASSER</button>
+      <button id="retro-btn-save" class="retro-btn" onclick="submitScore()" style="margin-bottom: 10px;">VALIDER</button>
+      <button class="retro-btn" onclick="closeSaveScoreModal()" style="background: #374151; color: #9ca3af; box-shadow: 0 4px 0 #1f2937;">ANNULER</button>
     </div>
   </div>
 
   <script>
   /* =========================================================================
-     5. LOGIQUE API CLOUDFLARE TOP 10 & HOOK SCORE (20 CARACTÈRES)
+     5. GESTION API CLOUDFLARE & DÉTECTION DU BOUTON GAME OVER
      ========================================================================= */
   const API_URL = "https://api-choppe-les-gosses.kjh27r4i-70a.workers.dev";
   let lastCapturedScore = 0;
@@ -529,7 +544,7 @@
           const tierClass = index === 0 ? "gold" : index === 1 ? "silver" : index === 2 ? "bronze" : "";
           li.className = "retro-item " + tierClass;
           li.innerHTML = `
-            <span style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">#${index + 1} ${escapeHtml(item.name)}</span>
+            <span style="max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">#${index + 1} ${escapeHtml(item.name)}</span>
             <span>${item.score} PTS</span>
           `;
           list.appendChild(li);
@@ -546,7 +561,7 @@
 
   function promptSaveScore(finalScore) {
     lastCapturedScore = finalScore;
-    document.getElementById("save-score-subtitle").innerText = "Score : " + finalScore + " PTS";
+    document.getElementById("save-score-subtitle").innerText = "SCORE : " + finalScore + " PTS";
     pseudoInput.value = "";
     charCountEl.innerText = "0 / 20";
     document.getElementById("save-score-box").style.display = "flex";
@@ -577,7 +592,7 @@
       })
       .finally(() => {
         btn.disabled = false;
-        btn.innerText = "ENREGISTRER";
+        btn.innerText = "VALIDER";
       });
   }
 
@@ -585,12 +600,54 @@
     return String(str || "").replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[m]);
   }
 
-  // Hook global déclenché lors de la fin de partie
+  // Hook global déclenché par le moteur de jeu lors d'une défaite
   window.onGameFinished = function(score) {
-    if (typeof score === 'number' && score > 0) {
-      promptSaveScore(score);
-    }
+    lastCapturedScore = score || 0;
   };
+
+  /* =========================================================================
+     OBSERVATEUR DOM : INJECTE LE BOUTON SUR L'ÉCRAN DE GAME OVER
+     ========================================================================= */
+  setInterval(function () {
+    // Vérifie si l'écran de fin de partie est affiché
+    var buttons = document.querySelectorAll("button");
+    var rejouerBtn = null;
+    buttons.forEach(function (btn) {
+      if ((btn.innerText || "").toUpperCase().indexOf("REJOUER") !== -1) {
+        rejouerBtn = btn;
+      }
+    });
+
+    if (rejouerBtn && rejouerBtn.parentElement) {
+      var container = rejouerBtn.parentElement;
+      if (!container.querySelector(".btn-gameover-record")) {
+        // Extraction du score visible à l'écran si disponible
+        var scoreCard = document.body.innerText.match(/SCORE FINAL[\s\n\r]*([0-9]+)/i);
+        if (scoreCard && scoreCard[1]) {
+          lastCapturedScore = parseInt(scoreCard[1], 10);
+        }
+
+        var saveBtn = document.createElement("button");
+        saveBtn.className = "btn-gameover-record";
+        saveBtn.innerHTML = "💾 ENREGISTRER LE SCORE";
+        saveBtn.onclick = function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          // Met à jour la valeur du score au moment du clic
+          var currentMatch = document.body.innerText.match(/SCORE FINAL[\s\n\r]*([0-9]+)/i);
+          var finalScore = currentMatch ? parseInt(currentMatch[1], 10) : lastCapturedScore;
+          promptSaveScore(finalScore);
+        };
+
+        // Ajoute le bouton juste sous les boutons REJOUER et MENU
+        if (container.nextSibling) {
+          container.parentNode.insertBefore(saveBtn, container.nextSibling);
+        } else {
+          container.parentNode.appendChild(saveBtn);
+        }
+      }
+    }
+  }, 300);
 
   /* =========================================================================
      6. PATCH DU MOTEUR DE JEU
@@ -599,7 +656,6 @@
     function patchGameEngine(code) {
       var patched = code.replace(/import\.meta\.url/g, JSON.stringify(window.location.href));
 
-      // Hook de capture du score de fin
       patched = patched.replace(
         'this.phase=`game_over`',
         'this.phase=`game_over`,window.onGameFinished&&window.onGameFinished(this.score||this.finalScore||0)'
@@ -609,13 +665,11 @@
         'this.phase=`victory`,window.onGameFinished&&window.onGameFinished(this.score||this.finalScore||0)'
       );
 
-      // 1. 16 voies réparties sur toute la hauteur
       patched = patched.replace(
         'og={values:[580,630,680],count:3,vanSpeed:250,changeSpeed:72,changeIntervalMs:[2600,9e3],turnIntervalMs:[5e3,16e3],turnChance:.5}',
         'og={values:[500,570,640,710,780,850,920,990,1060,1130,1200,1270,1340,1410,1480,1550],count:16,vanSpeed:620,changeSpeed:120,changeIntervalMs:[1800,6e3],turnIntervalMs:[5e3,16e3],turnChance:.5}'
       );
 
-      // 2. Tolérance de capture adaptée
       patched = patched.replace(
         'lg={halfWidth:56,holdMs:1500,laneTolerance:22}',
         'lg={halfWidth:62,holdMs:1500,laneTolerance:45}'
@@ -625,7 +679,6 @@
         'gg={baseIntervalMs:[900,1600],minIntervalMs:[360,620],rampSeconds:90,maxPedestrians:16,'
       );
 
-      // 3. Dessin de la route jusqu'en bas (y=1580)
       patched = patched.replace(
         'function s_(e,t){Q(e,t,606,46,11,`#22262f`),Q(e,t+4,608,38,7,`#2f3441`),Q(e,t+8,610,30,3,`rgba(255,255,255,0.06)`)}',
         'function s_(e,t){for(let y of[606,746,886,1026,1166,1306,1446]){Q(e,t,y,46,11,`#22262f`),Q(e,t+4,y+2,38,7,`#2f3441`),Q(e,t+8,y+4,30,3,`rgba(255,255,255,0.06)`)}}'
@@ -635,7 +688,6 @@
         'Q(e,0,ag.roadTop,Z,1580-ag.roadTop,sg.asphalt),Q(e,0,ag.roadTop,Z,12,sg.asphaltLight);for(let n=0;n<1800;n++){let n=Math.floor(t()*Z),r=ag.roadTop+14+Math.floor(t()*(1580-ag.roadTop-20));e.fillStyle=t()>.5?`rgba(255,255,255,0.03)`:`rgba(0,0,0,0.14)`,e.fillRect(n,r,3,2)}for(let ly of[596,736,876,1016,1156,1296,1436])for(let t=20;t<Z;t+=96)Q(e,t,ly,46,6,`rgba(207, 212, 221, 0.55)`)'
       );
 
-      // 4. Hauteur du canvas portée à 1580
       patched = patched.replace('e.width=Z,e.height=720;', 'e.width=Z,e.height=1580;');
       patched = patched.replace('e.clearRect(0,0,Z,720)', 'e.clearRect(0,0,Z,1580)');
       patched = patched.replace(/e\.fillRect\(0,0,Z,720\)/g, 'e.fillRect(0,0,Z,1580)');
@@ -645,13 +697,11 @@
         'width:Z,height:1580,className:`pixelated absolute inset-0 h-full w-full`'
       );
 
-      // 5. Déplacement vertical libre
       patched = patched.replace(
         'let i=og.values[e.targetLane],a=og.vanSpeed*t,o=i-e.y;Math.abs(o)<=a?(e.y=i,e.lane=e.targetLane):e.y+=Math.sign(o)*a,e.moving=Math.abs(e.speed)>8,e.animTime+=t',
         'let i=n.vy?n.vy:(!!n.down-+!!n.up);i!==0&&(e.y=c_(e.y+i*og.vanSpeed*t,466,1580)),e.moving=Math.abs(e.speed)>8||Math.abs(i)>.05,e.animTime+=t'
       );
 
-      // 6. Gestion du clavier / manette
       patched = patched.replace(
         'this.keys={left:!1,right:!1}',
         'this.keys={left:!1,right:!1,up:!1,down:!1,vy:0}'
@@ -681,7 +731,6 @@
         'handleBlur(){this.keys.left=!1,this.keys.right=!1,this.keys.up=!1,this.keys.down=!1,this.keys.vy=0,this.spaceHeld=!1}'
       );
 
-      // 7. Joystick analogique 360°
       patched = patched.replace(
         'var Ob=.22,kb=.55,Ab=.34,jb=.6,Mb=250;',
         'var Ob=.14,kb=.14,Ab=.1,jb=.55,Mb=50;'
@@ -699,7 +748,6 @@
         'i(Math.abs(h)<.14?0:h)'
       );
 
-      // 8. Boutons dans le bandeau inférieur
       patched = patched.replace(
         'var Tb=Z/720;function Eb(e){if(!e||!e.width||!e.height)return null;let t=Math.min(e.width,e.height*Tb),n=t/Tb;return{left:(e.width-t)/2,top:(e.height-n)/2,width:t,height:n}}',
         'var Tb=Z/1580;function Eb(e){if(!e||!e.width||!e.height)return null;if(e.height>e.width){let bh=e.height*0.165;return{left:0,top:e.height-bh,width:e.width,height:bh*2.4}}let t=Math.min(e.width,e.height*Tb),n=t/Tb;return{left:(e.width-t)/2,top:(e.height-n)/2,width:t,height:n}}'
