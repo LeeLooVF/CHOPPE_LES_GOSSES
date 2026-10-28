@@ -345,26 +345,27 @@
     }
 
     /* =========================================================================
-       BOUTON DU TOP 10 FLOTTANT & MODALE RÉTRO CLOUDFLARE
+       BOUTON DU TOP 10 FLOTTANT & DÉCALÉ (PLUS BAS, SANS RECOUVREMENT)
        ========================================================================= */
     #btn-open-top10 {
       position: fixed;
-      top: calc(env(safe-area-inset-top, 0px) + 12px);
-      right: 14px;
-      z-index: 999;
-      background: #111827;
+      top: calc(env(safe-area-inset-top, 0px) + 15.2dvh);
+      right: 12px;
+      z-index: 100;
+      background: rgba(17, 24, 39, 0.9);
       border: 2px solid #fbbf24;
       color: #fbbf24;
       font-family: 'Press Start 2P', monospace;
       font-size: 9px;
-      padding: 6px 10px;
+      padding: 7px 11px;
       border-radius: 8px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.6);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.7);
       cursor: pointer;
       display: flex;
       align-items: center;
       gap: 6px;
       text-transform: uppercase;
+      backdrop-filter: blur(4px);
     }
 
     #btn-open-top10:active {
@@ -431,7 +432,7 @@
       background: #38bdf8;
       color: #030712;
       border: none;
-      padding: 10px 16px;
+      padding: 11px 16px;
       font-family: 'Press Start 2P', monospace;
       font-size: 10px;
       cursor: pointer;
@@ -445,7 +446,7 @@
       box-shadow: 0 2px 0 #0284c7;
     }
 
-    /* Boîte de sauvegarde de score */
+    /* Boîte de sauvegarde du score */
     #save-score-box {
       display: none;
       position: fixed;
@@ -462,7 +463,7 @@
 <body>
   <div id="root"></div>
 
-  <!-- BOUTON D'ACCÈS AU TOP 10 -->
+  <!-- BOUTON D'ACCÈS AU TOP 10 DÉGAGÉ DE L'EN-TÊTE -->
   <button id="btn-open-top10" onclick="openTop10Modal()">🏆 Top 10</button>
 
   <!-- MODALE DU TOP 10 CLOUDFLARE -->
@@ -476,27 +477,38 @@
     </div>
   </div>
 
-  <!-- POP-UP SAUVEGARDE DU SCORE EN FIN DE PARTIE -->
+  <!-- POP-UP SAUVEGARDE DU SCORE AVEC PSEUDO JUSQU'À 20 CARACTÈRES -->
   <div id="save-score-box" class="retro-modal">
     <div class="retro-modal-content" onclick="event.stopPropagation()">
       <h3 id="save-score-title">FIN DE PARTIE !</h3>
-      <p id="save-score-subtitle" style="font-size: 9px; color: #94a3b8; margin-bottom: 16px;">Score : 0</p>
+      <p id="save-score-subtitle" style="font-size: 9px; color: #94a3b8; margin-bottom: 14px;">Score : 0</p>
       
-      <div style="margin-bottom: 16px;">
-        <input type="text" id="retro-pseudo-input" maxlength="15" placeholder="TON PSEUDO" style="width: 100%; box-sizing: border-box; background: #111827; border: 2px solid #38bdf8; color: #fff; font-family: 'Press Start 2P', monospace; font-size: 10px; padding: 10px; text-align: center; border-radius: 6px; outline: none;">
+      <div style="margin-bottom: 6px;">
+        <input type="text" id="retro-pseudo-input" maxlength="20" placeholder="TON PSEUDO" style="width: 100%; box-sizing: border-box; background: #111827; border: 2px solid #38bdf8; color: #fff; font-family: 'Press Start 2P', monospace; font-size: 10px; padding: 12px; text-align: center; border-radius: 6px; outline: none;">
       </div>
+      <div id="pseudo-char-count" style="font-size: 8px; color: #64748b; margin-bottom: 14px; text-align: right;">0 / 20</div>
 
-      <button id="retro-btn-save" class="retro-btn" onclick="submitScore()" style="margin-bottom: 8px;">ENREGISTRER</button>
+      <button id="retro-btn-save" class="retro-btn" onclick="submitScore()" style="margin-bottom: 10px;">ENREGISTRER</button>
       <button class="retro-btn" onclick="closeSaveScoreModal()" style="background: #374151; color: #9ca3af; box-shadow: 0 4px 0 #1f2937;">PASSER</button>
     </div>
   </div>
 
   <script>
   /* =========================================================================
-     5. LOGIQUE API CLOUDFLARE TOP 10 & HOOK SCORE
+     5. LOGIQUE API CLOUDFLARE TOP 10 & HOOK SCORE (20 CARACTÈRES)
      ========================================================================= */
   const API_URL = "https://api-choppe-les-gosses.kjh27r4i-70a.workers.dev";
   let lastCapturedScore = 0;
+
+  const pseudoInput = document.getElementById("retro-pseudo-input");
+  const charCountEl = document.getElementById("pseudo-char-count");
+
+  pseudoInput.addEventListener("input", function() {
+    if (this.value.length > 20) {
+      this.value = this.value.slice(0, 20);
+    }
+    charCountEl.innerText = this.value.length + " / 20";
+  });
 
   function openTop10Modal() {
     const modal = document.getElementById("retro-modal-leaderboard");
@@ -517,7 +529,7 @@
           const tierClass = index === 0 ? "gold" : index === 1 ? "silver" : index === 2 ? "bronze" : "";
           li.className = "retro-item " + tierClass;
           li.innerHTML = `
-            <span>#${index + 1} ${escapeHtml(item.name)}</span>
+            <span style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">#${index + 1} ${escapeHtml(item.name)}</span>
             <span>${item.score} PTS</span>
           `;
           list.appendChild(li);
@@ -535,8 +547,10 @@
   function promptSaveScore(finalScore) {
     lastCapturedScore = finalScore;
     document.getElementById("save-score-subtitle").innerText = "Score : " + finalScore + " PTS";
-    document.getElementById("retro-pseudo-input").value = "";
+    pseudoInput.value = "";
+    charCountEl.innerText = "0 / 20";
     document.getElementById("save-score-box").style.display = "flex";
+    setTimeout(() => pseudoInput.focus(), 150);
   }
 
   function closeSaveScoreModal() {
@@ -544,7 +558,7 @@
   }
 
   function submitScore() {
-    const pseudo = document.getElementById("retro-pseudo-input").value.trim() || "Anonyme";
+    const pseudo = pseudoInput.value.trim().substring(0, 20) || "Anonyme";
     const btn = document.getElementById("retro-btn-save");
     btn.disabled = true;
     btn.innerText = "ENVOI...";
@@ -571,7 +585,7 @@
     return String(str || "").replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[m]);
   }
 
-  // Hook global pour intercepter la fin de partie
+  // Hook global déclenché lors de la fin de partie
   window.onGameFinished = function(score) {
     if (typeof score === 'number' && score > 0) {
       promptSaveScore(score);
@@ -585,7 +599,7 @@
     function patchGameEngine(code) {
       var patched = code.replace(/import\.meta\.url/g, JSON.stringify(window.location.href));
 
-      // Hook de fin de partie dans le moteur
+      // Hook de capture du score de fin
       patched = patched.replace(
         'this.phase=`game_over`',
         'this.phase=`game_over`,window.onGameFinished&&window.onGameFinished(this.score||this.finalScore||0)'
@@ -595,7 +609,7 @@
         'this.phase=`victory`,window.onGameFinished&&window.onGameFinished(this.score||this.finalScore||0)'
       );
 
-      // 1. 16 voies réparties sur toute la hauteur de la route
+      // 1. 16 voies réparties sur toute la hauteur
       patched = patched.replace(
         'og={values:[580,630,680],count:3,vanSpeed:250,changeSpeed:72,changeIntervalMs:[2600,9e3],turnIntervalMs:[5e3,16e3],turnChance:.5}',
         'og={values:[500,570,640,710,780,850,920,990,1060,1130,1200,1270,1340,1410,1480,1550],count:16,vanSpeed:620,changeSpeed:120,changeIntervalMs:[1800,6e3],turnIntervalMs:[5e3,16e3],turnChance:.5}'
@@ -631,13 +645,13 @@
         'width:Z,height:1580,className:`pixelated absolute inset-0 h-full w-full`'
       );
 
-      // 5. Déplacement vertical continu
+      // 5. Déplacement vertical libre
       patched = patched.replace(
         'let i=og.values[e.targetLane],a=og.vanSpeed*t,o=i-e.y;Math.abs(o)<=a?(e.y=i,e.lane=e.targetLane):e.y+=Math.sign(o)*a,e.moving=Math.abs(e.speed)>8,e.animTime+=t',
         'let i=n.vy?n.vy:(!!n.down-+!!n.up);i!==0&&(e.y=c_(e.y+i*og.vanSpeed*t,466,1580)),e.moving=Math.abs(e.speed)>8||Math.abs(i)>.05,e.animTime+=t'
       );
 
-      // 6. Support touches haut/bas et joystick
+      // 6. Gestion du clavier / manette
       patched = patched.replace(
         'this.keys={left:!1,right:!1}',
         'this.keys={left:!1,right:!1,up:!1,down:!1,vy:0}'
@@ -685,7 +699,7 @@
         'i(Math.abs(h)<.14?0:h)'
       );
 
-      // 8. Positionnement des boutons
+      // 8. Boutons dans le bandeau inférieur
       patched = patched.replace(
         'var Tb=Z/720;function Eb(e){if(!e||!e.width||!e.height)return null;let t=Math.min(e.width,e.height*Tb),n=t/Tb;return{left:(e.width-t)/2,top:(e.height-n)/2,width:t,height:n}}',
         'var Tb=Z/1580;function Eb(e){if(!e||!e.width||!e.height)return null;if(e.height>e.width){let bh=e.height*0.165;return{left:0,top:e.height-bh,width:e.width,height:bh*2.4}}let t=Math.min(e.width,e.height*Tb),n=t/Tb;return{left:(e.width-t)/2,top:(e.height-n)/2,width:t,height:n}}'
