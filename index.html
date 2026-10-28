@@ -27,7 +27,6 @@
       window.matchMedia = function (query) {
         var q = String(query || '').toLowerCase();
         var mql = origMatchMedia(query);
-        // Empêche le jeu de se mettre en pause ou d'afficher "TOURNE TON TÉLÉPHONE"
         if (q.indexOf('orientation: portrait') !== -1 || q.indexOf('orientation:portrait') !== -1 || q.indexOf('max-aspect-ratio') !== -1) {
           return {
             matches: false,
@@ -40,7 +39,6 @@
             dispatchEvent: function () { return false; }
           };
         }
-        // Force l'affichage du HUD mobile et des boutons tactiles (Joystick + Chopper)
         if (
           q.indexOf('orientation: landscape') !== -1 ||
           q.indexOf('orientation:landscape') !== -1 ||
@@ -164,10 +162,10 @@
 
   <style>
     /* =========================================================================
-       3. DISPOSITION PORTRAIT EN 3 ZONES DISTINCTES :
-          - HAUT (0 -> 14.5dvh)     : Barre HUD (Portrait, Manque, Score, Pause, Son)
-          - MILIEU (14.5 -> 83.5dvh): Zone de jeu (Immeubles + Toutes les routes jouables)
-          - BAS (83.5 -> 100dvh)    : Bandeau extérieur avec Joystick & bouton CHOPPER
+       3. DISPOSITION PORTRAIT EN 3 ZONES :
+          - HAUT (0 -> 14.5dvh)     : Barre HUD
+          - MILIEU (14.5 -> 83.5dvh): Zone de jeu (Immeubles + Route intégrale)
+          - BAS (83.5 -> 100dvh)    : Bandeau extérieur avec Joystick & CHOPPER
        ========================================================================= */
 
     html, body, #root {
@@ -181,7 +179,6 @@
       user-select: none !important;
     }
 
-    /* Masque tout écran demandant de tourner le téléphone */
     .phone-tilt,
     .gap-\[7vh\].px-\[8vw\] {
       display: none !important;
@@ -208,9 +205,7 @@
         overflow: hidden !important;
       }
 
-      /* -----------------------------------------------------------------------
-         ZONE 1 : BANDEAU HUD EN HAUT (0 à 14.5dvh)
-         ----------------------------------------------------------------------- */
+      /* ZONE 1 : BANDEAU HUD EN HAUT (0 à 14.5dvh) */
       .game-stage > .z-20 {
         position: absolute !important;
         top: 0 !important;
@@ -226,7 +221,6 @@
         z-index: 25 !important;
       }
 
-      /* Portrait du grand-père à gauche */
       .game-stage > .z-20 .h-\[11\.5cqw\].w-\[11\.5cqw\],
       .game-stage > .z-20 .h-\[11cqw\].w-\[11cqw\] {
         width: min(19.5cqw, 11.2dvh) !important;
@@ -234,7 +228,6 @@
         flex-shrink: 0 !important;
       }
 
-      /* Jauge MANQUE à côté du portrait */
       .game-stage > .z-20 .w-\[17cqw\],
       .game-stage > .z-20 .w-\[16cqw\] {
         width: 17.5cqw !important;
@@ -246,7 +239,6 @@
         height: 1.7cqw !important;
       }
 
-      /* Bloc SCORE / ADULTES / SUSP. / TEMPS + Boutons PAUSE et SON ON */
       .game-stage > .z-20 .gap-\[1\.3cqw\] {
         gap: 1.1cqw !important;
         padding: 0.9cqw 1.2cqw !important;
@@ -269,7 +261,6 @@
         height: 0.9cqw !important;
       }
 
-      /* Boutons PAUSE et SON ON */
       .game-stage > .z-20 button {
         min-height: 6.8cqw !important;
         min-width: auto !important;
@@ -278,10 +269,7 @@
         line-height: 1.15 !important;
       }
 
-      /* -----------------------------------------------------------------------
-         ZONE 2 : ZONE DE JEU ÉTENDUE (14.5dvh à 83.5dvh)
-                  Immeubles + Trottoir + Toutes les voies jouables
-         ----------------------------------------------------------------------- */
+      /* ZONE 2 : ZONE DE JEU ÉTENDUE (14.5dvh à 83.5dvh) */
       .game-stage > canvas,
       .game-stage > .crt-overlay {
         position: absolute !important;
@@ -294,10 +282,7 @@
         object-fit: fill !important;
       }
 
-      /* -----------------------------------------------------------------------
-         ZONE 3 : BANDEAU INFÉRIEUR EXTÉRIEUR À LA ROUTE (83.5dvh à 100dvh)
-                  Contient le Joystick (gauche) et le bouton CHOPPER (droite)
-         ----------------------------------------------------------------------- */
+      /* ZONE 3 : BANDEAU INFÉRIEUR EXTÉRIEUR À LA ROUTE (83.5dvh à 100dvh) */
       .game-stage::after {
         content: "" !important;
         position: absolute !important;
@@ -340,9 +325,7 @@
         z-index: 35 !important;
       }
 
-      /* -----------------------------------------------------------------------
-         MENUS D'ACCUEIL / PAUSE / GAME OVER LISIBLES EN PORTRAIT
-         ----------------------------------------------------------------------- */
+      /* MENUS D'ACCUEIL / PAUSE / GAME OVER */
       .game-stage > .z-30:not(.pointer-events-none),
       .game-stage > .z-40 {
         z-index: 50 !important;
@@ -377,30 +360,29 @@
 
   <script>
   /* =========================================================================
-     4. PATCH DU MOTEUR DE JEU (EXTENSION DES VOIES JOUABLES & BOUTONS EN BAS)
+     4. PATCH DU MOTEUR DE JEU : MOUVEMENT LIBRE SUR TOUTE LA ROUTE (Y: 466..1580)
      ========================================================================= */
   (function () {
     function patchGameEngine(code) {
       var patched = code.replace(/import\.meta\.url/g, JSON.stringify(window.location.href));
 
-      // 1. Étend les voies jouables (og) de 3 voies à 16 voies sur toute la hauteur de la route (y=535 à y=1555)
-      //    et augmente la vitesse verticale du véhicule (vanSpeed: 540) pour naviguer sur toutes les routes
+      // 1. 16 voies réparties sur toute la hauteur de la route (500 à 1550) + vitesse verticale fluide (620 px/s)
       patched = patched.replace(
         'og={values:[580,630,680],count:3,vanSpeed:250,changeSpeed:72,changeIntervalMs:[2600,9e3],turnIntervalMs:[5e3,16e3],turnChance:.5}',
-        'og={values:[535,603,671,739,807,875,943,1011,1079,1147,1215,1283,1351,1419,1487,1555],count:16,vanSpeed:540,changeSpeed:115,changeIntervalMs:[1800,6e3],turnIntervalMs:[5e3,16e3],turnChance:.5}'
+        'og={values:[500,570,640,710,780,850,920,990,1060,1130,1200,1270,1340,1410,1480,1550],count:16,vanSpeed:620,changeSpeed:120,changeIntervalMs:[1800,6e3],turnIntervalMs:[5e3,16e3],turnChance:.5}'
       );
 
-      // 2. Adapte la tolérance de capture verticale et le nombre de piétons à la grande route à 16 voies
+      // 2. Tolérance de capture adaptée au déplacement libre sur toute la surface
       patched = patched.replace(
         'lg={halfWidth:56,holdMs:1500,laneTolerance:22}',
-        'lg={halfWidth:60,holdMs:1500,laneTolerance:38}'
+        'lg={halfWidth:62,holdMs:1500,laneTolerance:45}'
       );
       patched = patched.replace(
         'gg={baseIntervalMs:[1500,2500],minIntervalMs:[560,900],rampSeconds:90,maxPedestrians:7,',
         'gg={baseIntervalMs:[900,1600],minIntervalMs:[360,620],rampSeconds:90,maxPedestrians:16,'
       );
 
-      // 3. Étend le dessin de la route (asphalte, texture, 7 lignes pointillées et plaques d'égout) jusqu'à y=1580
+      // 3. Dessin de la route et des 7 lignes blanches pointillées jusqu'en bas (y=1580)
       patched = patched.replace(
         'function s_(e,t){Q(e,t,606,46,11,`#22262f`),Q(e,t+4,608,38,7,`#2f3441`),Q(e,t+8,610,30,3,`rgba(255,255,255,0.06)`)}',
         'function s_(e,t){for(let y of[606,746,886,1026,1166,1306,1446]){Q(e,t,y,46,11,`#22262f`),Q(e,t+4,y+2,38,7,`#2f3441`),Q(e,t+8,y+4,30,3,`rgba(255,255,255,0.06)`)}}'
@@ -410,7 +392,7 @@
         'Q(e,0,ag.roadTop,Z,1580-ag.roadTop,sg.asphalt),Q(e,0,ag.roadTop,Z,12,sg.asphaltLight);for(let n=0;n<1800;n++){let n=Math.floor(t()*Z),r=ag.roadTop+14+Math.floor(t()*(1580-ag.roadTop-20));e.fillStyle=t()>.5?`rgba(255,255,255,0.03)`:`rgba(0,0,0,0.14)`,e.fillRect(n,r,3,2)}for(let ly of[596,736,876,1016,1156,1296,1436])for(let t=20;t<Z;t+=96)Q(e,t,ly,46,6,`rgba(207, 212, 221, 0.55)`)'
       );
 
-      // 4. Passe la hauteur du canvas de 720 à 1580 partout dans le moteur de rendu
+      // 4. Hauteur du canvas portée de 720 à 1580 dans tout le moteur
       patched = patched.replace('e.width=Z,e.height=720;', 'e.width=Z,e.height=1580;');
       patched = patched.replace('e.clearRect(0,0,Z,720)', 'e.clearRect(0,0,Z,1580)');
       patched = patched.replace(/e\.fillRect\(0,0,Z,720\)/g, 'e.fillRect(0,0,Z,1580)');
@@ -420,29 +402,61 @@
         'width:Z,height:1580,className:`pixelated absolute inset-0 h-full w-full`'
       );
 
-      // 5. Rend le déplacement vertical (monter / descendre) continu tant qu'on maintient le joystick ou les flèches
+      // 5. Déplacement vertical continu sur TOUTE la surface de la route (de y=466 en haut jusqu'à y=1580 tout en bas)
       patched = patched.replace(
-        'function Mv(e,t){e.targetLane=c_(e.targetLane+t,0,og.count-1)}',
-        'function Mv(e,t){if(Math.abs(og.values[e.targetLane]-e.y)>55&&Math.sign(e.targetLane-e.lane)===Math.sign(t))return;e.targetLane=c_(e.targetLane+t,0,og.count-1)}'
+        'let i=og.values[e.targetLane],a=og.vanSpeed*t,o=i-e.y;Math.abs(o)<=a?(e.y=i,e.lane=e.targetLane):e.y+=Math.sign(o)*a,e.moving=Math.abs(e.speed)>8,e.animTime+=t',
+        'let i=n.vy?n.vy:(!!n.down-+!!n.up);i!==0&&(e.y=c_(e.y+i*og.vanSpeed*t,466,1580)),e.moving=Math.abs(e.speed)>8||Math.abs(i)>.05,e.animTime+=t'
+      );
+
+      // 6. Prise en charge continue du haut/bas au clavier et au joystick
+      patched = patched.replace(
+        'this.keys={left:!1,right:!1}',
+        'this.keys={left:!1,right:!1,up:!1,down:!1,vy:0}'
       );
       patched = patched.replace(
-        'var Ob=.22,kb=.55,Ab=.34,jb=.6,Mb=250;',
-        'var Ob=.22,kb=.25,Ab=.16,jb=.6,Mb=80;'
+        'this.keys.left=!1,this.keys.right=!1,this.phase=`playing`',
+        'this.keys.left=!1,this.keys.right=!1,this.keys.up=!1,this.keys.down=!1,this.keys.vy=0,this.phase=`playing`'
       );
       patched = patched.replace(
-        'let v=h<=-.55?-1:+(h>=kb);if(v===0){clearTimeout(_.laneTimer),_.laneTimer=0,Math.abs(h)<Ab&&(_.laneDir=0);return}v!==_.laneDir&&(_.laneDir=v,clearTimeout(_.laneTimer),i(v),_.laneTimer=setTimeout(()=>{_.laneTimer=0,i(v)},Mb))',
-        'let v=h<=-kb?-1:+(h>=kb);if(v===0){clearInterval(_.laneTimer),_.laneTimer=0,Math.abs(h)<Ab&&(_.laneDir=0);return}v!==_.laneDir&&(_.laneDir=v,clearInterval(_.laneTimer),i(v),_.laneTimer=setInterval(()=>{i(v)},Mb))'
+        'this.phase===`playing`&&(this.keys.left=!1,this.keys.right=!1,this.spaceHeld=!1,this.pressQueued=!1,this.phase=`paused`,this.emit(!0))',
+        'this.phase===`playing`&&(this.keys.left=!1,this.keys.right=!1,this.keys.up=!1,this.keys.down=!1,this.keys.vy=0,this.spaceHeld=!1,this.pressQueued=!1,this.phase=`paused`,this.emit(!0))'
       );
       patched = patched.replace(
-        'clearTimeout(c.current.laneTimer)',
-        'clearInterval(c.current.laneTimer)'
+        'laneStep(e){this.phase===`playing`&&Mv(this.van,e)}',
+        'laneStep(e){this.keys.vy=this.phase===`playing`?e:0}'
       );
       patched = patched.replace(
         'case`ArrowUp`:case`KeyW`:e.preventDefault(),!e.repeat&&this.phase===`playing`&&Mv(this.van,-1);break;case`ArrowDown`:case`KeyS`:e.preventDefault(),!e.repeat&&this.phase===`playing`&&Mv(this.van,1);break;',
-        'case`ArrowUp`:case`KeyW`:e.preventDefault(),this.phase===`playing`&&Mv(this.van,-1);break;case`ArrowDown`:case`KeyS`:e.preventDefault(),this.phase===`playing`&&Mv(this.van,1);break;'
+        'case`ArrowUp`:case`KeyW`:this.keys.up=!0,e.preventDefault();break;case`ArrowDown`:case`KeyS`:this.keys.down=!0,e.preventDefault();break;'
+      );
+      patched = patched.replace(
+        'handleKeyUp(e){(e.code===`ArrowLeft`||e.code===`KeyA`)&&(this.keys.left=!1),(e.code===`ArrowRight`||e.code===`KeyD`)&&(this.keys.right=!1),e.code===`Space`&&(this.spaceHeld=!1)}',
+        'handleKeyUp(e){(e.code===`ArrowLeft`||e.code===`KeyA`)&&(this.keys.left=!1),(e.code===`ArrowRight`||e.code===`KeyD`)&&(this.keys.right=!1),(e.code===`ArrowUp`||e.code===`KeyW`)&&(this.keys.up=!1),(e.code===`ArrowDown`||e.code===`KeyS`)&&(this.keys.down=!1),e.code===`Space`&&(this.spaceHeld=!1)}'
+      );
+      patched = patched.replace(
+        'handleBlur(){this.keys.left=!1,this.keys.right=!1,this.spaceHeld=!1}',
+        'handleBlur(){this.keys.left=!1,this.keys.right=!1,this.keys.up=!1,this.keys.down=!1,this.keys.vy=0,this.spaceHeld=!1}'
       );
 
-      // 6. Positionne directement le Joystick et le bouton CHOPPER dans le bandeau inférieur (en dehors de la route)
+      // 7. Joystick analogique 360° sans blocage ni délai sur l'axe vertical
+      patched = patched.replace(
+        'var Ob=.22,kb=.55,Ab=.34,jb=.6,Mb=250;',
+        'var Ob=.14,kb=.14,Ab=.1,jb=.55,Mb=50;'
+      );
+      patched = patched.replace(
+        'm<=-.22?g=`left`:m>=Ob&&(g=`right`)',
+        'm<=-.14?g=`left`:m>=Ob&&(g=`right`)'
+      );
+      patched = patched.replace(
+        'u=()=>{s.current=null,l(0,0,!0),c.current.dir&&r(c.current.dir,!1),c.current.dir=null,c.current.laneDir=0,clearTimeout(c.current.laneTimer),c.current.laneTimer=0}',
+        'u=()=>{s.current=null,l(0,0,!0),c.current.dir&&r(c.current.dir,!1),c.current.dir=null,c.current.laneDir=0,i(0)}'
+      );
+      patched = patched.replace(
+        'let _=c.current,v=h<=-.55?-1:+(h>=kb);if(v===0){clearTimeout(_.laneTimer),_.laneTimer=0,Math.abs(h)<Ab&&(_.laneDir=0);return}v!==_.laneDir&&(_.laneDir=v,clearTimeout(_.laneTimer),i(v),_.laneTimer=setTimeout(()=>{_.laneTimer=0,i(v)},Mb))',
+        'i(Math.abs(h)<.14?0:h)'
+      );
+
+      // 8. Positionnement des 2 boutons dans le bandeau inférieur en dehors de la route
       patched = patched.replace(
         'var Tb=Z/720;function Eb(e){if(!e||!e.width||!e.height)return null;let t=Math.min(e.width,e.height*Tb),n=t/Tb;return{left:(e.width-t)/2,top:(e.height-n)/2,width:t,height:n}}',
         'var Tb=Z/1580;function Eb(e){if(!e||!e.width||!e.height)return null;if(e.height>e.width){let bh=e.height*0.165;return{left:0,top:e.height-bh,width:e.width,height:bh*2.4}}let t=Math.min(e.width,e.height*Tb),n=t/Tb;return{left:(e.width-t)/2,top:(e.height-n)/2,width:t,height:n}}'
