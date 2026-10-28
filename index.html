@@ -13,7 +13,7 @@
   <script>
   (function () {
     /* =========================================================================
-       1. SUPPRESSION DE L'OBLIGATION DU MODE PAYSAGE
+       1. SUPPRESSION DE L'OBLIGATION DU MODE PAYSAGE & ACTIVATION TACTILE
        ========================================================================= */
     function getPhysicalSize() {
       var vv = window.visualViewport;
@@ -53,7 +53,6 @@
       }
     } catch (e) {}
 
-    // Force l'activation des contrôles tactiles à l'écran
     try {
       if (!('ontouchstart' in window)) window.ontouchstart = null;
       if (!navigator.maxTouchPoints || navigator.maxTouchPoints < 1) {
@@ -102,7 +101,7 @@
     }
 
     /* =========================================================================
-       2. FIX REACT ROUTER & MOCK LOCAL API BASE44
+       2. FIX REACT ROUTER & SIMULATION API BASE44
        ========================================================================= */
     var maskedRootState = { idx: 0, key: 'default', usr: null, masked: { pathname: '/', search: '', hash: '' } };
     try {
@@ -193,7 +192,6 @@
   })();
   </script>
 
-  <!-- Chargement direct des polices Google Fonts (Press Start 2P & Inter) + CSS -->
   <link href="https://fonts.googleapis.com/" rel="preconnect">
   <link crossorigin="" href="https://fonts.gstatic.com/" rel="preconnect">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
@@ -202,7 +200,7 @@
 
   <style>
     /* =========================================================================
-       3. ADAPTATION PORTRAIT : TEXTES CORRIGÉS, PLEIN ÉCRAN & BOUTONS EN BAS
+       3. MISE EN PAGE MODE PORTRAIT (CONFORME AU VISUEL CIBLE)
        ========================================================================= */
 
     html, body, #root {
@@ -214,11 +212,18 @@
       height: 100%;
     }
 
-    /* Masque l'overlay de rotation téléphone */
+    /* Masque l'avertissement demandant de tourner l'appareil */
     .phone-tilt,
     .gap-\[7vh\].px-\[8vw\] {
       display: none !important;
       pointer-events: none !important;
+    }
+
+    /* Éléments de décor portrait (masqués sur PC / paysage) */
+    #portrait-hud-bg,
+    #road-extension-canvas,
+    #portrait-bottom-bar {
+      display: none;
     }
 
     @media (orientation: portrait) {
@@ -229,7 +234,6 @@
         user-select: none !important;
       }
 
-      /* Conteneur racine sur toute la hauteur et largeur */
       #root > div.flex.min-h-screen {
         padding: 0 !important;
         min-height: 100dvh !important;
@@ -244,7 +248,6 @@
         height: 100dvh !important;
       }
 
-      /* Scène de jeu étendue jusqu'en bas de l'écran */
       .game-stage {
         aspect-ratio: auto !important;
         width: 100vw !important;
@@ -252,100 +255,272 @@
         max-height: 100dvh !important;
         border-radius: 0 !important;
         border-width: 0 !important;
-        background-color: #0b1020 !important;
+        background-color: #070b16 !important;
+        position: relative !important;
+        overflow: hidden !important;
       }
 
-      /* Zone de jeu (Canvas + CRT) étendue sur 100% de l'écran jusqu'en bas */
-      .game-stage > canvas,
-      .game-stage > .crt-overlay {
-        inset: 0 !important;
+      /* -----------------------------------------------------------------------
+         A. BANDEAU SUPÉRIEUR DU HUD (0 à 15.5dvh)
+         ----------------------------------------------------------------------- */
+      #portrait-hud-bg {
+        display: block !important;
+        position: absolute !important;
         top: 0 !important;
         left: 0 !important;
         right: 0 !important;
-        bottom: 0 !important;
+        height: 15.5dvh !important;
+        background-color: #070b16 !important;
+        border-bottom: 2px solid #1b2640 !important;
+        z-index: 14 !important;
+        pointer-events: none !important;
+      }
+
+      /* -----------------------------------------------------------------------
+         B. ZONE DE JEU CENTRALE + ROUTE PROLONGÉE JUSQU'À 84dvh
+         ----------------------------------------------------------------------- */
+      /* Le canvas principal commence à 1.5dvh pour masquer le ciel vide sous le HUD
+         et afficher les immeubles dès 15.5dvh sans les déformer */
+      .game-stage > canvas:not(#road-extension-canvas) {
+        inset: auto !important;
+        top: 1.5dvh !important;
+        left: 0 !important;
+        right: 0 !important;
         width: 100vw !important;
-        height: 100dvh !important;
+        height: 53.5dvh !important;
+        z-index: 5 !important;
         border: none !important;
-        box-shadow: none !important;
+      }
+
+      /* Prolongation visuelle de la route pointillée de 54dvh jusqu'à 84dvh */
+      #road-extension-canvas {
+        display: block !important;
+        position: absolute !important;
+        top: 53.8dvh !important;
+        left: 0 !important;
+        right: 0 !important;
+        width: 100vw !important;
+        height: 30.2dvh !important;
+        z-index: 6 !important;
+        image-rendering: pixelated !important;
+        image-rendering: crisp-edges !important;
+        pointer-events: none !important;
+      }
+
+      /* Effet CRT sur toute la zone de jeu (immeubles + route étendue) */
+      .game-stage > .crt-overlay {
+        inset: auto !important;
+        top: 15.5dvh !important;
+        left: 0 !important;
+        right: 0 !important;
+        width: 100vw !important;
+        height: 68.5dvh !important;
+        z-index: 10 !important;
       }
 
       /* -----------------------------------------------------------------------
-         CORRECTION DES DIMENSIONS DES TEXTES & DU HUD (PAS DE DÉBORDEMENT)
+         C. BANDEAU INFÉRIEUR DES CONTRÔLES (84dvh à 100dvh)
          ----------------------------------------------------------------------- */
-      .game-stage .text-\[5\.4cqw\] { font-size: 5.2cqw !important; }
-      .game-stage .text-\[4\.7cqw\] { font-size: 4.8cqw !important; }
-      .game-stage .text-\[3cqw\]    { font-size: 3.2cqw !important; }
-      .game-stage .text-\[2\.3cqw\] { font-size: 2.5cqw !important; }
-      .game-stage .text-\[2\.1cqw\] { font-size: 2.3cqw !important; }
-      .game-stage .text-\[1\.9cqw\] { font-size: 2.1cqw !important; }
-      .game-stage .text-\[1\.7cqw\] { font-size: 1.95cqw !important; }
-      .game-stage .text-\[1\.6cqw\] { font-size: 1.85cqw !important; }
-      .game-stage .text-\[1\.5cqw\] { font-size: 1.75cqw !important; }
-      .game-stage .text-\[1\.4cqw\] { font-size: 1.65cqw !important; }
-      .game-stage .text-\[1\.35cqw\]{ font-size: 1.6cqw !important; }
-      .game-stage .text-\[1\.3cqw\] { font-size: 1.55cqw !important; }
-      .game-stage .text-\[1\.25cqw\]{ font-size: 1.5cqw !important; }
-      .game-stage .text-\[1\.15cqw\]{ font-size: 1.45cqw !important; }
-      .game-stage .text-\[1\.1cqw\] { font-size: 1.4cqw !important; }
-      .game-stage .text-\[1\.05cqw\]{ font-size: 1.35cqw !important; }
-      .game-stage .text-\[1cqw\]    { font-size: 1.3cqw !important; }
-      .game-stage .text-\[0\.95cqw\]{ font-size: 1.25cqw !important; }
-      .game-stage .text-\[0\.85cqw\]{ font-size: 1.15cqw !important; }
-      .game-stage .text-\[0\.8cqw\] { font-size: 1.1cqw !important; }
-
-      /* Ajustement du HUD supérieur pour que tout rentre dans la largeur */
-      .game-stage .h-\[11cqw\] { height: 11.5cqw !important; }
-      .game-stage .w-\[11cqw\] { width: 11.5cqw !important; }
-      .game-stage .w-\[16cqw\] { width: 18cqw !important; }
-      .game-stage .w-\[17cqw\] { width: 19cqw !important; }
-      .game-stage .h-\[2\.8cqw\] { height: 5.2cqw !important; }
-      .game-stage .w-\[2\.8cqw\] { width: 5.2cqw !important; }
-
-      /* Espacements modérés pour les menus et modales */
-      .game-stage .max-w-\[46cqw\],
-      .game-stage .max-w-\[64cqw\],
-      .game-stage .max-w-\[72cqw\],
-      .game-stage .max-w-\[76cqw\],
-      .game-stage .max-w-\[86cqw\],
-      .game-stage .max-w-\[88cqw\],
-      .game-stage .max-w-\[94cqw\] {
-        max-width: 90cqw !important;
+      #portrait-bottom-bar {
+        display: block !important;
+        position: absolute !important;
+        top: 84dvh !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        height: 16dvh !important;
+        background-color: #070b16 !important;
+        border-top: 2px solid #1b2640 !important;
+        z-index: 14 !important;
+        pointer-events: none !important;
       }
 
-      .game-stage .px-\[1\.7cqw\]  { padding-left: 3.2cqw !important; padding-right: 3.2cqw !important; }
-      .game-stage .py-\[1\.05cqw\] { padding-top: 2.0cqw !important; padding-bottom: 2.0cqw !important; }
+      /* -----------------------------------------------------------------------
+         D. CALIBRAGE DU HUD SUPÉRIEUR (TOUT TIENT SUR UNE LIGNE COMME LE VISUEL)
+         ----------------------------------------------------------------------- */
+      /* Conteneur HUD en haut */
+      .game-stage > .z-20 {
+        padding-top: calc(env(safe-area-inset-top, 0px) + 1.2dvh) !important;
+        padding-left: 1.5cqw !important;
+        padding-right: 1.5cqw !important;
+        z-index: 25 !important;
+      }
+
+      /* Portrait du grand-père à gauche */
+      .game-stage .h-\[11cqw\].w-\[11cqw\] {
+        width: min(20cqw, 12.8dvh) !important;
+        height: min(20cqw, 12.8dvh) !important;
+        flex-shrink: 0 !important;
+      }
+
+      /* Jauge MANQUE à côté du portrait */
+      .game-stage .w-\[16cqw\],
+      .game-stage .w-\[17cqw\] {
+        width: 18.5cqw !important;
+      }
+      .game-stage .h-\[1\.1cqw\],
+      .game-stage .h-\[1\.5cqw\] {
+        height: 1.6cqw !important;
+      }
+
+      /* Tailles de texte compactes dans le HUD (.z-20) pour éviter tout débordement */
+      .game-stage > .z-20 .text-\[0\.8cqw\],
+      .game-stage > .z-20 .text-\[0\.85cqw\] {
+        font-size: 1.45cqw !important;
+        letter-spacing: 0.03em !important;
+      }
+      .game-stage > .z-20 .text-\[0\.95cqw\],
+      .game-stage > .z-20 .text-\[1cqw\],
+      .game-stage > .z-20 .text-\[1\.05cqw\],
+      .game-stage > .z-20 .text-\[1\.1cqw\] {
+        font-size: 1.65cqw !important;
+        letter-spacing: 0.04em !important;
+      }
+      .game-stage > .z-20 .text-\[1\.25cqw\],
+      .game-stage > .z-20 .text-\[1\.3cqw\],
+      .game-stage > .z-20 .text-\[1\.35cqw\],
+      .game-stage > .z-20 .text-\[1\.4cqw\],
+      .game-stage > .z-20 .text-\[1\.5cqw\],
+      .game-stage > .z-20 .text-\[1\.6cqw\],
+      .game-stage > .z-20 .text-\[1\.7cqw\] {
+        font-size: 2.05cqw !important;
+      }
+
+      /* Petits carrés sous ADULTES et SUSP. */
+      .game-stage > .z-20 .h-\[0\.55cqw\] {
+        height: 0.85cqw !important;
+      }
+      .game-stage > .z-20 .w-\[1\.1cqw\] {
+        width: 1.45cqw !important;
+      }
+
+      /* Paddings et espacements réduits dans le bloc SCORE / ADULTES / SUSP. / TEMPS + PAUSE / SON */
+      .game-stage > .z-20 .px-\[1\.2cqw\],
+      .game-stage > .z-20 .px-\[1\.3cqw\],
+      .game-stage > .z-20 .px-\[1\.4cqw\],
+      .game-stage > .z-20 .px-\[1\.5cqw\] {
+        padding-left: 1.15cqw !important;
+        padding-right: 1.15cqw !important;
+      }
+      .game-stage > .z-20 .py-\[0\.7cqw\],
+      .game-stage > .z-20 .py-\[0\.8cqw\],
+      .game-stage > .z-20 .py-\[0\.85cqw\] {
+        padding-top: 1.1cqw !important;
+        padding-bottom: 1.1cqw !important;
+      }
+      .game-stage > .z-20 .gap-\[1\.2cqw\],
+      .game-stage > .z-20 .gap-\[1\.3cqw\],
+      .game-stage > .z-20 .gap-\[1\.4cqw\],
+      .game-stage > .z-20 .gap-\[1\.5cqw\],
+      .game-stage > .z-20 .gap-\[1\.6cqw\] {
+        gap: 1.05cqw !important;
+      }
+
+      /* Boutons PAUSE et SON ON à droite du HUD */
+      .game-stage > .z-20 button {
+        min-height: 7.5cqw !important;
+        padding-left: 1.3cqw !important;
+        padding-right: 1.3cqw !important;
+      }
 
       /* -----------------------------------------------------------------------
-         POSITIONNEMENT DES DEUX BOUTONS TACTILES EN BAS DE L'ÉCRAN
+         E. POSITIONNEMENT DES 2 BOUTONS TACTILES EN BAS DE L'ÉCRAN (84dvh-100dvh)
          ----------------------------------------------------------------------- */
-      /* Descend tout élément positionné à top-[60%] tout en bas de l'écran */
-      .game-stage .top-\[60\%\] {
-        top: auto !important;
-        bottom: calc(env(safe-area-inset-bottom, 0px) + 3.5dvh) !important;
+      /* Neutralise le top-[60%] sur tout conteneur intermédiaire des contrôles */
+      .game-stage .top-\[60\%\],
+      [data-role="controls-ancestor"] {
+        top: 0 !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
         --tw-translate-y: 0px !important;
-        transform: translate(var(--tw-translate-x, 0px), 0px) !important;
+        transform: none !important;
       }
 
-      /* Joystick à gauche (h-[13cqw] w-[13cqw]) en bas à gauche */
-      .game-stage .h-\[13cqw\].w-\[13cqw\] {
-        height: 23cqw !important;
-        width: 23cqw !important;
+      /* Joystick circulaire en bas à gauche */
+      .game-stage .h-\[13cqw\].w-\[13cqw\],
+      [data-role="joystick-pad"] {
+        position: absolute !important;
         top: auto !important;
-        bottom: calc(env(safe-area-inset-bottom, 0px) + 3.5dvh) !important;
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 1.8dvh) !important;
         left: 5cqw !important;
+        right: auto !important;
+        width: min(23cqw, 12.4dvh) !important;
+        height: min(23cqw, 12.4dvh) !important;
         --tw-translate-y: 0px !important;
         transform: none !important;
+        z-index: 30 !important;
       }
 
-      /* Bouton CHOPPER à droite (h-[11.5cqw] w-[11.5cqw]) en bas à droite */
-      .game-stage .h-\[11\.5cqw\].w-\[11\.5cqw\] {
-        height: 21cqw !important;
-        width: 21cqw !important;
+      /* Bouton circulaire CHOPPER en bas à droite */
+      .game-stage .h-\[11\.5cqw\].w-\[11\.5cqw\],
+      [data-role="chopper-btn"] {
+        position: absolute !important;
         top: auto !important;
-        bottom: calc(env(safe-area-inset-bottom, 0px) + 4dvh) !important;
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 1.8dvh) !important;
         right: 5cqw !important;
+        left: auto !important;
+        width: min(23cqw, 12.4dvh) !important;
+        height: min(23cqw, 12.4dvh) !important;
         --tw-translate-y: 0px !important;
         transform: none !important;
+        z-index: 30 !important;
+        font-size: 2.5cqw !important;
+        font-weight: 700 !important;
+      }
+
+      .game-stage .h-\[11\.5cqw\].w-\[11\.5cqw\] *,
+      [data-role="chopper-btn"] * {
+        font-size: 2.5cqw !important;
+        font-weight: 700 !important;
+      }
+
+      /* -----------------------------------------------------------------------
+         F. MENUS D'ACCUEIL / PAUSE / GAME OVER (.z-30) LISIBLES EN PORTRAIT
+         ----------------------------------------------------------------------- */
+      .game-stage > .z-30 {
+        z-index: 50 !important;
+        padding-left: 5cqw !important;
+        padding-right: 5cqw !important;
+        gap: 3.8cqw !important;
+      }
+      .game-stage > .z-30 .text-\[4\.7cqw\],
+      .game-stage > .z-30 .text-\[5\.4cqw\] {
+        font-size: 6.4cqw !important;
+      }
+      .game-stage > .z-30 .text-\[3cqw\] {
+        font-size: 4.5cqw !important;
+      }
+      .game-stage > .z-30 .text-\[1\.7cqw\],
+      .game-stage > .z-30 .text-\[1\.9cqw\],
+      .game-stage > .z-30 .text-\[2\.1cqw\],
+      .game-stage > .z-30 .text-\[2\.3cqw\] {
+        font-size: 3.4cqw !important;
+      }
+      .game-stage > .z-30 .text-\[1\.15cqw\],
+      .game-stage > .z-30 .text-\[1\.25cqw\],
+      .game-stage > .z-30 .text-\[1\.3cqw\] {
+        font-size: 2.8cqw !important;
+      }
+      .game-stage > .z-30 .text-\[0\.95cqw\],
+      .game-stage > .z-30 .text-\[1cqw\] {
+        font-size: 2.3cqw !important;
+      }
+      .game-stage > .z-30 .max-w-\[46cqw\],
+      .game-stage > .z-30 .max-w-\[64cqw\],
+      .game-stage > .z-30 .max-w-\[72cqw\],
+      .game-stage > .z-30 .max-w-\[76cqw\] {
+        max-width: 88cqw !important;
+      }
+      .game-stage > .z-30 .px-\[1\.7cqw\] {
+        padding-left: 4cqw !important;
+        padding-right: 4cqw !important;
+      }
+      .game-stage > .z-30 .py-\[1\.05cqw\] {
+        padding-top: 2.5cqw !important;
+        padding-bottom: 2.5cqw !important;
       }
     }
   </style>
@@ -380,7 +555,160 @@
 
   <script>
   /* =========================================================================
-     4. CHARGEUR DU BUNDLE JS
+     4. EXTENSION DE LA ROUTE & PLACEMENT AUTOMATIQUE DES CONTRÔLES EN BAS
+     ========================================================================= */
+  (function () {
+    function setupPortraitLayout() {
+      var stage = document.querySelector('.game-stage');
+      if (!stage) return;
+
+      // 1. Création du bandeau HUD supérieur
+      if (!document.getElementById('portrait-hud-bg')) {
+        var hudBg = document.createElement('div');
+        hudBg.id = 'portrait-hud-bg';
+        stage.appendChild(hudBg);
+      }
+
+      // 2. Création du canvas d'extension de la route (54dvh -> 84dvh)
+      var extCanvas = document.getElementById('road-extension-canvas');
+      if (!extCanvas) {
+        extCanvas = document.createElement('canvas');
+        extCanvas.id = 'road-extension-canvas';
+        extCanvas.width = 1280;
+        extCanvas.height = 420;
+        stage.appendChild(extCanvas);
+      }
+
+      // 3. Création du bandeau inférieur pour les 2 boutons (84dvh -> 100dvh)
+      if (!document.getElementById('portrait-bottom-bar')) {
+        var bottomBar = document.createElement('div');
+        bottomBar.id = 'portrait-bottom-bar';
+        stage.appendChild(bottomBar);
+      }
+
+      // 4. Identification et ancrage en bas du Joystick et du bouton CHOPPER
+      var joy = stage.querySelector('.h-\\[13cqw\\].w-\\[13cqw\\]');
+      var chopper = stage.querySelector('.h-\\[11\\.5cqw\\].w-\\[11\\.5cqw\\]');
+
+      if (joy && !joy.hasAttribute('data-role')) {
+        joy.setAttribute('data-role', 'joystick-pad');
+        var p = joy.parentElement;
+        while (p && p !== stage) {
+          p.setAttribute('data-role', 'controls-ancestor');
+          p = p.parentElement;
+        }
+      }
+
+      if (chopper && !chopper.hasAttribute('data-role')) {
+        chopper.setAttribute('data-role', 'chopper-btn');
+        var p2 = chopper.parentElement;
+        while (p2 && p2 !== stage) {
+          p2.setAttribute('data-role', 'controls-ancestor');
+          p2 = p2.parentElement;
+        }
+      }
+    }
+
+    // Rendu continu de la route prolongée (synchronisée avec le défilement de la route du jeu)
+    function startRoadExtensionLoop() {
+      var dashOffset = 0;
+      var lastTime = performance.now();
+
+      // Pré-génération de la texture d'asphalte pixel-art (bandes horizontales + grain)
+      var roadTile = document.createElement('canvas');
+      roadTile.width = 1280;
+      roadTile.height = 420;
+      var rCtx = roadTile.getContext('2d');
+
+      for (var y = 0; y < 420; y += 4) {
+        rCtx.fillStyle = (y % 8 === 0) ? '#222836' : '#262d3d';
+        rCtx.fillRect(0, y, 1280, 4);
+      }
+
+      function renderRoad(now) {
+        var dt = Math.min((now - lastTime) / 1000, 0.1);
+        lastTime = now;
+
+        var extCanvas = document.getElementById('road-extension-canvas');
+        var mainCanvas = document.querySelector('.game-stage > canvas:not(#road-extension-canvas)');
+
+        if (extCanvas && mainCanvas && window.matchMedia) {
+          var ctx = extCanvas.getContext('2d');
+          ctx.imageSmoothingEnabled = false;
+
+          // Fond d'asphalte
+          ctx.drawImage(roadTile, 0, 0);
+
+          // Synchronisation de la phase des pointillés avec le canvas principal s'il est accessible
+          var synced = false;
+          try {
+            var mCtx = mainCanvas.getContext('2d');
+            var rowData = mCtx.getImageData(0, 557, 160, 1).data;
+            for (var x = 0; x < 156; x++) {
+              var idx = x * 4;
+              var prevIdx = ((x + 159) % 160) * 4;
+              var isDash = rowData[idx] > 130 && rowData[idx + 1] > 140 && rowData[idx + 2] > 155 && Math.abs(rowData[idx] - rowData[idx + 1]) < 25;
+              var wasDash = rowData[prevIdx] > 130 && rowData[prevIdx + 1] > 140 && rowData[prevIdx + 2] > 155 && Math.abs(rowData[prevIdx] - rowData[prevIdx + 1]) < 25;
+              if (isDash && !wasDash) {
+                dashOffset = x;
+                synced = true;
+                break;
+              }
+            }
+          } catch (e) {}
+
+          if (!synced) {
+            dashOffset = (dashOffset - dt * 240) % 80;
+            if (dashOffset < 0) dashOffset += 80;
+          }
+
+          // Traces sombres d'usure de l'asphalte entre les voies
+          var markRows = [36, 118, 200, 282, 364];
+          ctx.fillStyle = '#1b202c';
+          for (var m = 0; m < markRows.length; m++) {
+            var my = markRows[m];
+            var mShift = ((dashOffset * 1.5) + m * 210) % 320;
+            for (var mx = -320; mx < 1600; mx += 320) {
+              ctx.fillRect(Math.floor(mx + mShift), my, 38, 4);
+              ctx.fillRect(Math.floor(mx + mShift + 140), my + 12, 34, 4);
+            }
+          }
+
+          // Lignes blanches pointillées des voies (prolongeant la route jusqu'en bas)
+          var laneRows = [74, 156, 238, 320, 402];
+          ctx.fillStyle = '#9aa7bd';
+          for (var l = 0; l < laneRows.length; l++) {
+            var ly = laneRows[l];
+            for (var lx = -80; lx < 1360; lx += 80) {
+              ctx.fillRect(Math.floor(lx + (dashOffset % 80)), ly, 40, 4);
+            }
+          }
+        }
+        requestAnimationFrame(renderRoad);
+      }
+
+      requestAnimationFrame(renderRoad);
+    }
+
+    var observer = new MutationObserver(function () {
+      setupPortraitLayout();
+    });
+
+    if (document.body) {
+      setupPortraitLayout();
+      observer.observe(document.body, { childList: true, subtree: true });
+      startRoadExtensionLoop();
+    } else {
+      document.addEventListener('DOMContentLoaded', function () {
+        setupPortraitLayout();
+        observer.observe(document.body, { childList: true, subtree: true });
+        startRoadExtensionLoop();
+      });
+    }
+  })();
+
+  /* =========================================================================
+     5. CHARGEUR DU BUNDLE JS
      ========================================================================= */
   (function () {
     var candidates = [
