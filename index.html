@@ -6,12 +6,43 @@
   <title>CHOPPE LES GOSSES !</title>
   <meta content="CHOPPE LES GOSSES ! Un jeu d'arcade 2D en pixel art : conduis la camionnette, capture les enfants, évite les adultes et échappe à la police." name="description">
   <meta content="yes" name="mobile-web-app-capable">
-  <meta content="black" name="apple-mobile-web-app-status-bar-style">
+  <meta content="yes" name="apple-mobile-web-app-capable">
+  <meta content="black-translucent" name="apple-mobile-web-app-status-bar-style">
   <meta content="CHOPPE LES GOSSES" name="apple-mobile-web-app-title">
   <link href="https://media.base44.com/images/public/6adf7ca68921328224a33146/4138cc298_logo.png/v1/fit/w_180,h_180/4138cc298_logo.png" rel="icon" type="image/svg+xml">
 
   <script>
   (function () {
+    /* =========================================================================
+       0. ANTI-BARRE SAFARI IPHONE (BLOQUE LE SCROLL & LES GESTES SYSTÈME IOS)
+       ========================================================================= */
+    window.addEventListener('scroll', function () {
+      if (window.scrollY !== 0 || window.scrollX !== 0) {
+        window.scrollTo(0, 0);
+      }
+    }, { passive: false });
+
+    document.addEventListener('touchstart', function (e) {
+      var tag = e.target && e.target.tagName ? e.target.tagName.toUpperCase() : '';
+      var isModalList = e.target && e.target.closest && e.target.closest('#retro-leaderboard-list');
+      if (tag !== 'INPUT' && tag !== 'BUTTON' && !isModalList) {
+        if (e.touches && e.touches.length > 1) {
+          e.preventDefault();
+        }
+      }
+    }, { passive: false });
+
+    document.addEventListener('touchmove', function (e) {
+      var isModalList = e.target && e.target.closest && e.target.closest('#retro-leaderboard-list');
+      if (!isModalList) {
+        e.preventDefault();
+      }
+    }, { passive: false });
+
+    document.addEventListener('gesturestart', function (e) {
+      e.preventDefault();
+    }, { passive: false });
+
     /* =========================================================================
        1. DÉSACTIVATION DU VERROU PAYSAGE & ACTIVATION DES CONTRÔLES TACTILES
        ========================================================================= */
@@ -161,15 +192,23 @@
   <link href="./CHOPPE LES GOSSES !_files/index-BYDJH_uF.css" rel="stylesheet" onerror="this.onerror=null;this.href='https://choppelesgosses.ne-fais-pas-le-geste.com/assets/index-BYDJH_uF.css';">
 
   <style>
+    /* Verrouillage total pour empêcher l'apparition de la barre Safari sur iPhone */
     html, body, #root {
+      position: fixed !important;
+      inset: 0 !important;
       background-color: #060911 !important;
       color: #cfe3ff;
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
+      margin: 0 !important;
+      padding: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
       overflow: hidden !important;
+      overscroll-behavior: none !important;
+      touch-action: none !important;
       user-select: none !important;
+      -webkit-user-select: none !important;
+      -webkit-touch-callout: none !important;
+      -webkit-tap-highlight-color: transparent !important;
     }
 
     .phone-tilt,
@@ -182,20 +221,21 @@
       #root > div {
         padding: 0 !important;
         width: 100vw !important;
-        height: 100dvh !important;
-        min-height: 100dvh !important;
+        height: 100% !important;
+        min-height: 100% !important;
       }
 
       .game-stage {
         aspect-ratio: auto !important;
         width: 100vw !important;
-        height: 100dvh !important;
-        max-height: 100dvh !important;
+        height: 100% !important;
+        max-height: 100% !important;
         border-radius: 0 !important;
         border-width: 0 !important;
         background-color: #070b16 !important;
         position: relative !important;
         overflow: hidden !important;
+        touch-action: none !important;
       }
 
       .game-stage > .z-20 {
@@ -203,7 +243,7 @@
         top: 0 !important;
         left: 0 !important;
         right: 0 !important;
-        height: 14.5dvh !important;
+        height: 14.5% !important;
         padding: calc(env(safe-area-inset-top, 0px) + 0.8dvh) 1.5cqw 0.8dvh 1.5cqw !important;
         background-color: #070b16 !important;
         border-bottom: 2px solid #1b2640 !important;
@@ -265,12 +305,13 @@
       .game-stage > .crt-overlay {
         position: absolute !important;
         inset: auto !important;
-        top: 14.5dvh !important;
+        top: 14.5% !important;
         left: 0 !important;
         right: 0 !important;
         width: 100vw !important;
-        height: 69dvh !important;
+        height: 66.5% !important;
         object-fit: fill !important;
+        touch-action: none !important;
       }
 
       .game-stage::after {
@@ -278,7 +319,7 @@
         position: absolute !important;
         left: 0 !important;
         right: 0 !important;
-        top: 83.5dvh !important;
+        top: 81% !important;
         bottom: 0 !important;
         background-color: #070b16 !important;
         border-top: 2px solid #1b2640 !important;
@@ -286,31 +327,40 @@
         pointer-events: none !important;
       }
 
+      /* Contrôles remontés loin du bord inférieur iPhone pour éviter la barre Safari */
       [aria-label="Joystick de conduite"] {
         position: absolute !important;
         top: auto !important;
-        bottom: calc(env(safe-area-inset-bottom, 0px) + 1.8dvh) !important;
-        left: 6vw !important;
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 4.2dvh) !important;
+        left: 7vw !important;
         right: auto !important;
-        width: min(23.5vw, 12.6dvh) !important;
-        height: min(23.5vw, 12.6dvh) !important;
+        width: min(24vw, 13dvh) !important;
+        height: min(24vw, 13dvh) !important;
         border-width: 2px !important;
         border-color: rgba(207, 227, 255, 0.28) !important;
         background-color: rgba(17, 25, 48, 0.85) !important;
         z-index: 35 !important;
+        touch-action: none !important;
+        user-select: none !important;
+        -webkit-user-select: none !important;
+        -webkit-touch-callout: none !important;
       }
 
       [aria-label="Chopper (maintenir pour capturer)"] {
         position: absolute !important;
         top: auto !important;
-        bottom: calc(env(safe-area-inset-bottom, 0px) + 1.8dvh) !important;
-        right: 6vw !important;
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 4.2dvh) !important;
+        right: 7vw !important;
         left: auto !important;
-        width: min(23.5vw, 12.6dvh) !important;
-        height: min(23.5vw, 12.6dvh) !important;
+        width: min(24vw, 13dvh) !important;
+        height: min(24vw, 13dvh) !important;
         font-size: min(3.1vw, 1.7dvh) !important;
         border-width: 2px !important;
         z-index: 35 !important;
+        touch-action: none !important;
+        user-select: none !important;
+        -webkit-user-select: none !important;
+        -webkit-touch-callout: none !important;
       }
 
       .game-stage > .z-30:not(.pointer-events-none),
@@ -437,6 +487,7 @@
       margin: 0 0 16px 0;
       max-height: 250px;
       overflow-y: auto;
+      touch-action: pan-y;
       font-size: 9px;
       text-align: left;
     }
@@ -658,7 +709,7 @@
   }, 300);
 
   /* =========================================================================
-     6. PATCH DU MOTEUR DE JEU (VITESSE RÉDUITE À 210 px/s POUR UN CONTRÔLE SOUPLE)
+     6. PATCH DU MOTEUR DE JEU (ÉQUILIBRAGE HAUT/BAS ET GAUCHE/DROITE)
      ========================================================================= */
   (function () {
     function patchGameEngine(code) {
@@ -673,10 +724,20 @@
         'this.phase=`victory`,window.onGameFinished&&window.onGameFinished(this.score||this.finalScore||0)'
       );
 
-      // 1. Vitesse verticale réduite à 210 px/s pour un pilotage ultra souple et sans à-coup
+      // 1. Vitesse Haut/Bas augmentée légèrement (vanSpeed passé de 210 à 255)
       patched = patched.replace(
         'og={values:[580,630,680],count:3,vanSpeed:250,changeSpeed:72,changeIntervalMs:[2600,9e3],turnIntervalMs:[5e3,16e3],turnChance:.5}',
-        'og={values:[500,570,640,710,780,850,920,990,1060,1130,1200,1270,1340,1410,1480,1550],count:16,vanSpeed:210,changeSpeed:120,changeIntervalMs:[1800,6e3],turnIntervalMs:[5e3,16e3],turnChance:.5}'
+        'og={values:[500,570,640,710,780,850,920,990,1060,1130,1200,1270,1340,1410,1480,1550],count:16,vanSpeed:255,changeSpeed:120,changeIntervalMs:[1800,6e3],turnIntervalMs:[5e3,16e3],turnChance:.5}'
+      );
+
+      // 2. Vitesse Gauche/Droite ralentie à 62% de sa vitesse initiale
+      patched = patched.replace(
+        /e\.x\+=e\.speed\*t/g,
+        'e.x+=e.speed*0.62*t'
+      );
+      patched = patched.replace(
+        /e\.x=c_\(e\.x\+e\.speed\*t/g,
+        'e.x=c_(e.x+e.speed*0.62*t'
       );
 
       patched = patched.replace(
@@ -740,13 +801,14 @@
         'handleBlur(){this.keys.left=!1,this.keys.right=!1,this.keys.up=!1,this.keys.down=!1,this.keys.vy=0,this.spaceHeld=!1}'
       );
 
+      // 3. Sensibilité du joystick : zone morte gauche/droite à .32 (moins nerveux) et haut/bas plus réactif (.82 au lieu de .65)
       patched = patched.replace(
         'var Ob=.22,kb=.55,Ab=.34,jb=.6,Mb=250;',
-        'var Ob=.26,kb=.26,Ab=.18,jb=.55,Mb=80;'
+        'var Ob=.32,kb=.20,Ab=.15,jb=.55,Mb=80;'
       );
       patched = patched.replace(
         'm<=-.22?g=`left`:m>=Ob&&(g=`right`)',
-        'm<=-.26?g=`left`:m>=Ob&&(g=`right`)'
+        'm<=-.32?g=`left`:m>=Ob&&(g=`right`)'
       );
       patched = patched.replace(
         'u=()=>{s.current=null,l(0,0,!0),c.current.dir&&r(c.current.dir,!1),c.current.dir=null,c.current.laneDir=0,clearTimeout(c.current.laneTimer),c.current.laneTimer=0}',
@@ -754,7 +816,7 @@
       );
       patched = patched.replace(
         'let _=c.current,v=h<=-.55?-1:+(h>=kb);if(v===0){clearTimeout(_.laneTimer),_.laneTimer=0,Math.abs(h)<Ab&&(_.laneDir=0);return}v!==_.laneDir&&(_.laneDir=v,clearTimeout(_.laneTimer),i(v),_.laneTimer=setTimeout(()=>{_.laneTimer=0,i(v)},Mb))',
-        'i(Math.abs(h)<.26?0:h*Math.abs(h)*.65)'
+        'i(Math.abs(h)<.20?0:h*Math.abs(h)*.82)'
       );
 
       patched = patched.replace(
